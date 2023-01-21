@@ -4107,7 +4107,7 @@ bool Node3DEditorViewport::_apply_preview_material(ObjectID p_target, const Poin
 
 	Object *target_inst = ObjectDB::get_instance(p_target);
 
-	bool is_ctrl = Input::get_singleton()->is_key_pressed(Key::CTRL);
+	bool is_ctrl = Input::get_singleton()->is_key_pressed(Key::CMD_OR_CTRL);
 
 	MeshInstance3D *mesh_instance = Object::cast_to<MeshInstance3D>(target_inst);
 	if (is_ctrl && mesh_instance) {
@@ -4437,7 +4437,7 @@ void Node3DEditorViewport::drop_data_fw(const Point2 &p_point, const Variant &p_
 	}
 
 	bool is_shift = Input::get_singleton()->is_key_pressed(Key::SHIFT);
-	bool is_ctrl = Input::get_singleton()->is_key_pressed(Key::CTRL);
+	bool is_ctrl = Input::get_singleton()->is_key_pressed(Key::CMD_OR_CTRL);
 
 	selected_files.clear();
 	Dictionary d = p_data;
