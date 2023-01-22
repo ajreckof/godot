@@ -42,7 +42,7 @@ bool ViewPanner::gui_input(const Ref<InputEvent> &p_event, Rect2 p_canvas_rect) 
 		// and one with pressed as false. Make sure we only process one of them.
 		if (scroll_vec != Vector2() && mb->is_pressed()) {
 			if (control_scheme == SCROLL_PANS) {
-				if (mb->is_ctrl_pressed()) {
+				if (mb->is_ctrl_pressed()) { //unique force scroll on vertical
 					scroll_vec.y *= mb->get_factor();
 					callback_helper(zoom_callback, varray(scroll_vec, mb->get_position(), mb->is_alt_pressed()));
 					return true;
@@ -59,7 +59,7 @@ bool ViewPanner::gui_input(const Ref<InputEvent> &p_event, Rect2 p_canvas_rect) 
 					return true;
 				}
 			} else {
-				if (mb->is_ctrl_pressed()) {
+				if (mb->is_ctrl_pressed()) { //unique same as above but swapped
 					Vector2 panning;
 					if (mb->is_shift_pressed()) {
 						panning.x += mb->get_factor() * scroll_vec.y;
