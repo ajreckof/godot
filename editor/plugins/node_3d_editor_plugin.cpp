@@ -1929,7 +1929,7 @@ void Node3DEditorViewport::_sinput(const Ref<InputEvent> &p_event) {
 				nav_mode = NAVIGATION_ORBIT;
 			} else if (nav_scheme == NAVIGATION_MODO && m->is_alt_pressed() && m->is_shift_pressed()) {
 				nav_mode = NAVIGATION_PAN;
-			} else if (nav_scheme == NAVIGATION_MODO && m->is_alt_pressed() && m->is_ctrl_pressed()) {
+			} else if (nav_scheme == NAVIGATION_MODO && m->is_alt_pressed() && m->is_command_or_control_pressed()) {
 				nav_mode = NAVIGATION_ZOOM;
 			} else if (nav_scheme == NAVIGATION_MODO && m->is_alt_pressed()) {
 				nav_mode = NAVIGATION_ORBIT;

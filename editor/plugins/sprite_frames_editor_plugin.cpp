@@ -168,7 +168,7 @@ void SpriteFramesEditor::_sheet_preview_input(const Ref<InputEvent> &p_event) {
 					// Prevent double-toggling the same frame when moving the mouse when the mouse button is still held.
 					frames_toggled_by_mouse_hover.insert(idx);
 
-					if (mb->is_ctrl_pressed()) {
+					if (mb->is_command_or_control_pressed()) {
 						frames_selected.erase(i);
 					} else {
 						frames_selected.insert(i);

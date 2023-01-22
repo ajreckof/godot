@@ -1199,10 +1199,10 @@ GridMapEditor::GridMapEditor() {
 	options->get_popup()->add_separator();
 	options->get_popup()->add_check_item(TTR("Paste Selects"), MENU_OPTION_PASTE_SELECTS);
 	options->get_popup()->add_separator();
-	options->get_popup()->add_item(TTR("Duplicate Selection"), MENU_OPTION_SELECTION_DUPLICATE, KeyModifierMask::CTRL + Key::C);
-	options->get_popup()->add_item(TTR("Cut Selection"), MENU_OPTION_SELECTION_CUT, KeyModifierMask::CTRL + Key::X);
+	options->get_popup()->add_item(TTR("Duplicate Selection"), MENU_OPTION_SELECTION_DUPLICATE, KeyModifierMask::CMD_OR_CTRL + Key::C);
+	options->get_popup()->add_item(TTR("Cut Selection"), MENU_OPTION_SELECTION_CUT, KeyModifierMask::CMD_OR_CTRL + Key::X);
 	options->get_popup()->add_item(TTR("Clear Selection"), MENU_OPTION_SELECTION_CLEAR, Key::KEY_DELETE);
-	options->get_popup()->add_item(TTR("Fill Selection"), MENU_OPTION_SELECTION_FILL, KeyModifierMask::CTRL + Key::F);
+	options->get_popup()->add_item(TTR("Fill Selection"), MENU_OPTION_SELECTION_FILL, KeyModifierMask::CMD_OR_CTRL + Key::F);
 
 	options->get_popup()->add_separator();
 	options->get_popup()->add_item(TTR("Settings..."), MENU_OPTION_GRIDMAP_SETTINGS);

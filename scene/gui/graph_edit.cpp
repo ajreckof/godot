@@ -1199,8 +1199,8 @@ void GraphEdit::gui_input(const Ref<InputEvent> &p_ev) {
 		}
 
 		if (b->get_button_index() == MouseButton::LEFT && !b->is_pressed() && dragging) {
-			if (!just_selected && drag_accum == Vector2() && Input::get_singleton()->is_key_pressed(Key::CTRL)) {
-				//deselect current node
+			if (!just_selected && drag_accum == Vector2() && Input::get_singleton()->is_key_pressed(Key::CMD_OR_CTRL)) {
+				//deselect current node when it was not dragged
 				for (int i = get_child_count() - 1; i >= 0; i--) {
 					GraphNode *gn = Object::cast_to<GraphNode>(get_child(i));
 
@@ -1269,7 +1269,7 @@ void GraphEdit::gui_input(const Ref<InputEvent> &p_ev) {
 				dragging = true;
 				drag_accum = Vector2();
 				just_selected = !gn->is_selected();
-				if (!gn->is_selected() && !Input::get_singleton()->is_key_pressed(Key::CTRL)) {
+				if (!gn->is_selected() && !Input::get_singleton()->is_key_pressed(Key::CMD_OR_CTRL)) {
 					for (int i = 0; i < get_child_count(); i++) {
 						GraphNode *o_gn = Object::cast_to<GraphNode>(get_child(i));
 						if (!o_gn) {
@@ -1306,7 +1306,7 @@ void GraphEdit::gui_input(const Ref<InputEvent> &p_ev) {
 				// Left-clicked on empty space, start box select.
 				box_selecting = true;
 				box_selecting_from = b->get_position();
-				if (b->is_ctrl_pressed()) {
+				if (b->is_command_or_control_pressed()) {
 					box_selection_mode_additive = true;
 					previous_selected.clear();
 					for (int i = get_child_count() - 1; i >= 0; i--) {
