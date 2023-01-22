@@ -563,7 +563,7 @@ void GraphEdit::_set_drag_comment_enclosed_nodes(GraphNode *p_node, HashMap<Stri
 void GraphEdit::_set_position_of_comment_enclosed_nodes(GraphNode *p_node, HashMap<StringName, Vector<GraphNode *>> &p_comment_enclosed_nodes, Vector2 p_drag_accum) {
 	for (int i = 0; i < p_comment_enclosed_nodes[p_node->get_name()].size(); i++) {
 		Vector2 pos = (p_comment_enclosed_nodes[p_node->get_name()][i]->get_drag_from() * zoom + drag_accum) / zoom;
-		if (is_using_snap() ^ Input::get_singleton()->is_key_pressed(Key::CTRL)) {
+		if (is_using_snap() ^ Input::get_singleton()->is_key_pressed(Key::CTRL)) { //snap
 			const int snap = get_snap();
 			pos = pos.snapped(Vector2(snap, snap));
 		}
@@ -1135,7 +1135,7 @@ void GraphEdit::gui_input(const Ref<InputEvent> &p_ev) {
 
 				// Snapping can be toggled temporarily by holding down Ctrl.
 				// This is done here as to not toggle the grid when holding down Ctrl.
-				if (is_using_snap() ^ Input::get_singleton()->is_key_pressed(Key::CTRL)) {
+				if (is_using_snap() ^ Input::get_singleton()->is_key_pressed(Key::CTRL)) { //snap
 					const int snap = get_snap();
 					pos = pos.snapped(Vector2(snap, snap));
 				}

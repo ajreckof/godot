@@ -347,7 +347,7 @@ Point2 CanvasItemEditor::snap_point(Point2 p_target, unsigned int p_modes, unsig
 	snap_target[0] = SNAP_TARGET_NONE;
 	snap_target[1] = SNAP_TARGET_NONE;
 
-	bool is_snap_active = smart_snap_active ^ Input::get_singleton()->is_key_pressed(Key::CTRL);
+	bool is_snap_active = smart_snap_active ^ Input::get_singleton()->is_key_pressed(Key::CTRL); // snap
 
 	// Smart snap using the canvas position
 	Vector2 output = p_target;
@@ -473,7 +473,7 @@ Point2 CanvasItemEditor::snap_point(Point2 p_target, unsigned int p_modes, unsig
 }
 
 real_t CanvasItemEditor::snap_angle(real_t p_target, real_t p_start) const {
-	if (((smart_snap_active || snap_rotation) ^ Input::get_singleton()->is_key_pressed(Key::CTRL)) && snap_rotation_step != 0) {
+	if (((smart_snap_active || snap_rotation) ^ Input::get_singleton()->is_key_pressed(Key::CTRL)) && snap_rotation_step != 0) { //snap
 		if (snap_relative) {
 			return Math::snapped(p_target - snap_rotation_offset, snap_rotation_step) + snap_rotation_offset + (p_start - (int)(p_start / snap_rotation_step) * snap_rotation_step);
 		} else {
@@ -1897,7 +1897,7 @@ bool CanvasItemEditor::_gui_input_scale(const Ref<InputEvent> &p_event) {
 			Transform2D simple_xform = (viewport->get_transform() * unscaled_transform).affine_inverse() * transform;
 
 			bool uniform = m->is_shift_pressed();
-			bool is_ctrl = m->is_ctrl_pressed();
+			bool is_ctrl = m->is_ctrl_pressed(); //snap
 
 			Point2 drag_from_local = simple_xform.xform(drag_from);
 			Point2 drag_to_local = simple_xform.xform(drag_to);

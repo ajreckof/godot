@@ -174,7 +174,7 @@ void CurveEditor::gui_input(const Ref<InputEvent> &p_event) {
 				// Snap to "round" coordinates when holding Ctrl.
 				// Be more precise when holding Shift as well.
 				float snap_threshold;
-				if (mm.is_ctrl_pressed()) {
+				if (mm.is_ctrl_pressed()) { //snap
 					snap_threshold = mm.is_shift_pressed() ? 0.025 : 0.1;
 				} else {
 					snap_threshold = 0.0;
