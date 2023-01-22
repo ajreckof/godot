@@ -1270,7 +1270,7 @@ bool CanvasItemEditor::_gui_input_zoom_or_pan(const Ref<InputEvent> &p_event, bo
 	Ref<InputEventPanGesture> pan_gesture = p_event;
 	if (pan_gesture.is_valid() && !p_already_accepted) {
 		// If ctrl key pressed, then zoom instead of pan.
-		if (pan_gesture->is_ctrl_pressed()) {
+		if (pan_gesture->is_ctrl_pressed()) { //zoom with ctrl+scroll
 			const real_t factor = pan_gesture->get_delta().y;
 
 			zoom_widget->set_zoom_by_increments(1);
