@@ -231,11 +231,7 @@ BitField<KeyModifierMask> InputEventWithModifiers::get_modifiers_mask() const {
 		mask.set_flag(KeyModifierMask::META);
 	}
 	if (is_command_or_control_autoremap()) {
-#ifdef MACOS_ENABLED
-		mask.set_flag(KeyModifierMask::META);
-#else
-		mask.set_flag(KeyModifierMask::CTRL);
-#endif
+		mask.set_flag(KeyModifierMask::CMD_OR_CTRL);
 	}
 	return mask;
 }

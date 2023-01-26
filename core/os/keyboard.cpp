@@ -445,11 +445,7 @@ String keycode_get_string(Key p_code) {
 		codestr += "+";
 	}
 	if ((p_code & KeyModifierMask::CMD_OR_CTRL) != Key::NONE) {
-#ifdef MACOS_ENABLED
-		codestr += find_keycode_name(Key::META);
-#else
-		codestr += find_keycode_name(Key::CTRL);
-#endif
+		codestr += find_keycode_name(Key::CMD_OR_CTRL);
 		codestr += "+";
 	}
 	if ((p_code & KeyModifierMask::CTRL) != Key::NONE) {

@@ -3320,12 +3320,7 @@ TEST_CASE("[SceneTree][CodeEdit] symbol lookup") {
 		CHECK(code_edit->get_text_for_symbol_lookup() == "this is s" + String::chr(0xFFFF) + "ome text");
 
 		SIGNAL_WATCH(code_edit, "symbol_validate");
-
-#ifdef MACOS_ENABLED
-		SEND_GUI_KEY_EVENT(code_edit, Key::META);
-#else
-		SEND_GUI_KEY_EVENT(code_edit, Key::CTRL);
-#endif
+		SEND_GUI_KEY_EVENT(code_edit, Key::CMD_OR_CTRL);
 
 		Array signal_args;
 		Array arg;
