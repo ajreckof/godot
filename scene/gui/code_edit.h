@@ -445,7 +445,6 @@ VARIANT_ENUM_CAST(CodeEdit::CodeCompletionLocation);
 // The custom comparer which will sort completion options.
 struct CodeCompletionOptionCompare {
 	static String base;
-
 	_FORCE_INLINE_ bool operator()(const ScriptLanguage::CodeCompletionOption &l, const ScriptLanguage::CodeCompletionOption &r) const;
 };
 

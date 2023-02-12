@@ -35,6 +35,7 @@
 #include "core/io/resource.h"
 #include "core/templates/pair.h"
 #include "core/templates/rb_map.h"
+#include "core/variant/typed_array.h"
 
 class ScriptLanguage;
 template <typename T>
@@ -335,8 +336,9 @@ public:
 		Ref<Resource> icon;
 		Variant default_value;
 		Vector<Pair<int, int>> matches;
+		Vector<Pair<int, int>> last_matches;
 		int location = LOCATION_OTHER;
-
+		TypedArray<int> charac;
 		CodeCompletionOption() {}
 
 		CodeCompletionOption(const String &p_text, CodeCompletionKind p_kind, int p_location = LOCATION_OTHER) {
@@ -345,6 +347,8 @@ public:
 			kind = p_kind;
 			location = p_location;
 		}
+
+		TypedArray<int> get_option_characteristics(String base);
 
 		bool is_basic_identifier() const {
 			return (kind == ScriptLanguage::CODE_COMPLETION_KIND_VARIABLE ||

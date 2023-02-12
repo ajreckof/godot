@@ -179,10 +179,9 @@ void CodeEdit::_notification(int p_what) {
 					Point2 match_pos = Point2(code_completion_rect.position.x + icon_area_size.x + icon_hsep, code_completion_rect.position.y + i * row_height);
 
 					for (int j = 0; j < code_completion_options[l].matches.size(); j++) {
-						Pair<int, int> match = code_completion_options[l].matches[j];
-						int match_offset = font->get_string_size(code_completion_options[l].display.substr(0, match.first), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).width;
-						int match_len = font->get_string_size(code_completion_options[l].display.substr(match.first, match.second), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).width;
-
+						Pair<int, int> match_segment = code_completion_options[l].matches[j];
+						int match_offset = font->get_string_size(code_completion_options[l].display.substr(0, match_segment.first), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).width;
+						int match_len = font->get_string_size(code_completion_options[l].display.substr(match_segment.first, match_segment.second), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).width;
 						draw_rect(Rect2(match_pos + Point2(match_offset, 0), Size2(match_len, row_height)), code_completion_existing_color);
 					}
 
@@ -2929,12 +2928,12 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 	code_completion_options.clear();
 	code_completion_base = string_to_complete;
 
-	Vector<ScriptLanguage::CodeCompletionOption> completion_options_substr_casei;
-
 	int max_width = 0;
 	String string_to_complete_lower = string_to_complete.to_lower();
+	CodeCompletionOptionCompare::base = string_to_complete;
 
 	for (ScriptLanguage::CodeCompletionOption &option : code_completion_option_sources) {
+		option.matches.clear();
 		if (single_quote && option.display.is_quoted()) {
 			option.display = option.display.unquote().quote("'");
 		}
@@ -2962,59 +2961,72 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 			continue;
 		}
 
-		// if (option.display.similarity(string_to_complete) < 0.1) {
-		// 	continue;
-		// }
+		String target_lower = option.display.to_lower();
+		const char32_t *string_to_complete_char_lower = &string_to_complete_lower[0];
+		const char32_t *target_char_lower = &target_lower[0];
 
-		String display_lower = option.display.to_lower();
-
-		const char32_t *ssq_lower = &string_to_complete_lower[0];
-
-		const char32_t *tgt = &option.display[0];
-		const char32_t *tgt_lower = &display_lower[0];
-
-		Vector<Pair<int, int>> ssq_matches;
-
-		Vector<Pair<int, int>> ssq_lower_matches;
-		int ssq_lower_match_start = 0;
-		int ssq_lower_match_len = 0;
-
-		int sst_lower_start = -1;
-
-		for (int i = 0; *tgt; tgt++, tgt_lower++, i++) {
-			// Check lower subsequence.
-			if (*ssq_lower == *tgt_lower) {
-				ssq_lower++;
-				if (ssq_lower_match_len == 0) {
-					ssq_lower_match_start = i;
-				}
-				ssq_lower_match_len++;
-			} else if (ssq_lower_match_len > 0) {
-				ssq_lower_matches.push_back(Pair<int, int>(ssq_lower_match_start, ssq_lower_match_len));
-				ssq_lower_match_len = 0;
+		Vector<Vector<Pair<int, int>>> all_possible_subsequence_matches;
+		for (int i = 0; *target_char_lower; i++, target_char_lower++) {
+			if (*target_char_lower == *string_to_complete_char_lower) {
+				all_possible_subsequence_matches.push_back({ { i, 1 } });
 			}
 		}
+		string_to_complete_char_lower++;
 
-		if (!*ssq_lower) { // Matched the whole subsequence in s_lower.
-			option.matches.clear();
-
-			if (sst_lower_start >= 0) {
-				option.matches.push_back(Pair<int, int>(sst_lower_start, string_to_complete.length()));
-				completion_options_substr_casei.push_back(option);
-			} else {
-				if (ssq_lower_match_len > 0) {
-					ssq_lower_matches.push_back(Pair<int, int>(ssq_lower_match_start, ssq_lower_match_len));
+		for (int i = 1; *string_to_complete_char_lower && (all_possible_subsequence_matches.size() > 0); i++, string_to_complete_char_lower++) {
+			// find all occurences of ssq_lower to avoid looking everywhere each time
+			Vector<int> all_ocurence;
+			for (int j = i; j < target_lower.length(); j++) {
+				if (target_lower[j] == *string_to_complete_char_lower) {
+					all_ocurence.push_back(j);
 				}
-				option.matches.append_array(ssq_lower_matches);
-				completion_options_substr_casei.push_back(option);
 			}
+
+			Vector<Vector<Pair<int, int>>> next_subsequence_matches;
+			for (Vector<Pair<int, int>> &subsequence_matches : all_possible_subsequence_matches) {
+				Pair<int, int> match_last_segment = subsequence_matches[subsequence_matches.size() - 1];
+				int next_index = match_last_segment.first + match_last_segment.second;
+				// get the last index from current sequence
+				// and look for next char starting from that index
+				if (target_lower[next_index] == *string_to_complete_char_lower) {
+					Vector<Pair<int, int>> new_matches = subsequence_matches;
+					new_matches.write[new_matches.size() - 1].second++;
+					next_subsequence_matches.push_back(new_matches);
+				}
+				for (int index : all_ocurence) {
+					if (index > next_index) {
+						Vector<Pair<int, int>> new_matches = subsequence_matches;
+						new_matches.push_back({ index, 1 });
+						next_subsequence_matches.push_back(new_matches);
+					}
+				}
+			}
+			all_possible_subsequence_matches = next_subsequence_matches;
+		}
+		// go through all possible matches to get the best one as defined by CodeCompletionOptionCompare
+		if (all_possible_subsequence_matches.size() > 0) {
+			option.matches = all_possible_subsequence_matches[0];
+			option.get_option_characteristics(string_to_complete);
+			all_possible_subsequence_matches = all_possible_subsequence_matches.slice(1);
+			if (all_possible_subsequence_matches.size() > 0) {
+				CodeCompletionOptionCompare compare;
+				ScriptLanguage::CodeCompletionOption compared_option = option;
+				for (Vector<Pair<int, int>> &matches : all_possible_subsequence_matches) {
+					compared_option.matches = matches;
+					compared_option.get_option_characteristics(string_to_complete);
+					if (compare(compared_option, option)) {
+						option.matches = matches;
+						option.charac = compared_option.charac;
+					}
+				}
+			}
+
+			code_completion_options.push_back(option);
 			if (font.is_valid()) {
 				max_width = MAX(max_width, font->get_string_size(option.display, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).width + offset);
 			}
 		}
 	}
-
-	code_completion_options.append_array(completion_options_substr_casei);
 
 	/* No options to complete, cancel. */
 	if (code_completion_options.size() == 0) {
@@ -3028,7 +3040,6 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 		return;
 	}
 
-	CodeCompletionOptionCompare::base = string_to_complete;
 	code_completion_options.sort_custom<CodeCompletionOptionCompare>();
 
 	code_completion_longest_line = MIN(max_width, code_completion_max_width * font_size);
@@ -3162,99 +3173,28 @@ CodeEdit::~CodeEdit() {
 
 String CodeCompletionOptionCompare::base;
 
-int levenshtein_distance(const String &source, const String &target) {
-	if (source.size() > target.size()) {
-		return levenshtein_distance(target, source);
-	}
-
-	const int min_size = source.size();
-	const int max_size = target.size();
-	Vector<int> lev_dist;
-	lev_dist.resize(min_size + 1);
-
-	for (int i = 0; i <= min_size; ++i) {
-		lev_dist.write[i] = i;
-	}
-
-	for (int j = 1; j <= max_size; ++j) {
-		int previous_diagonal = lev_dist[0];
-		lev_dist.write[0] += 1;
-
-		for (int i = 1; i <= min_size; ++i) {
-			const int previous_diagonal_save = lev_dist[i];
-			if (source[i - 1] == target[j - 1]) {
-				lev_dist.write[i] = previous_diagonal;
-			} else {
-				lev_dist.write[i] = MIN(MIN(lev_dist[i - 1], lev_dist[i]), previous_diagonal) + 1;
-			}
-			previous_diagonal = previous_diagonal_save;
-		}
-	}
-
-	return lev_dist[min_size];
-}
-
 // Return true if l should come before r
 bool CodeCompletionOptionCompare::operator()(const ScriptLanguage::CodeCompletionOption &l, const ScriptLanguage::CodeCompletionOption &r) const {
 	// Get position of exact match
-	int l_exact_idx = l.display.findn(base);
-	int r_exact_idx = r.display.findn(base);
 
-	bool l_exact = l_exact_idx != -1;
-	bool r_exact = r_exact_idx != -1;
-
-	// Compare position to length of base to discard exact matches which are very far from the start.
-	// Other wise you have things like MyLongVeryLongNameVec3 being ranked before Vector3 for search 'vec3'
-	if ((l_exact && l_exact_idx <= base.length() * 2) || (r_exact && l_exact_idx <= base.length() * 2)) {
-		if (l_exact && r_exact) {
-			if (l.location != r.location) {
-				return l.location < r.location;
-			}
-			if (l_exact_idx != r_exact_idx) {
-				return l_exact_idx < r_exact_idx;
-			}
+	// Check if we are not completing an empty string in this case there is no reason to get matches characteristics.
+	// This enables us to assure option passed to get_option_characteristics are not null matches.
+	if (base.length() == 0) {
+		return l.display < r.display;
+	}
+	TypedArray<int> lcharac = l.charac;
+	TypedArray<int> rcharac = r.charac;
+	if (lcharac != rcharac) {
+		return lcharac < rcharac;
+	}
+	// to get here they need to have the same size so we can take the size of whichever we want
+	for (int i = 0; i < l.matches.size(); ++i) {
+		if (l.matches[i].first != r.matches[i].first) {
+			return l.matches[i].first < r.matches[i].first;
 		}
-
-		if (l_exact != r_exact) {
-			return l_exact;
+		if (l.matches[i].second != r.matches[i].second) {
+			return l.matches[i].second > r.matches[i].second;
 		}
 	}
-
-	const int l_lev = levenshtein_distance(base, l.display);
-	const int r_lev = levenshtein_distance(base, r.display);
-
-	if (ABS(l_lev - r_lev) > 8) {
-		return l_lev < r_lev;
-	}
-
-	if (l.location != r.location) {
-		return l.location < r.location;
-	}
-
-	bool all_match_groups_same = true;
-	int matches_shared_size = MIN(l.matches.size(), r.matches.size());
-	for (int i = 0; i < matches_shared_size; ++i) {
-		if (l.matches[i].first != r.matches[i].first || l.matches[i].second != r.matches[i].second) {
-			all_match_groups_same = false;
-			break;
-		}
-	}
-
-	if (matches_shared_size > 0 && !all_match_groups_same) {
-		for (int i = 0; i < matches_shared_size; ++i) {
-			if (l.matches[i].first != r.matches[i].first) {
-				return l.matches[i].first < r.matches[i].first;
-			}
-		}
-	}
-
-	if (!l.matches.is_empty() && !r.matches.is_empty()) {
-		float l_match_score = (float)(l.matches[0].first + 1) / l.matches[0].second;
-		float r_match_score = (float)(r.matches[0].first + 1) / r.matches[0].second;
-		if (!Math::is_equal_approx(l_match_score, r_match_score, 0.2f)) {
-			return l_match_score < r_match_score;
-		}
-	}
-
-	return l_lev < r_lev;
+	return l.display < r.display;
 }

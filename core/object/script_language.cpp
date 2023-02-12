@@ -34,7 +34,6 @@
 #include "core/core_string_names.h"
 #include "core/debugger/engine_debugger.h"
 #include "core/debugger/script_debugger.h"
-#include "core/variant/typed_array.h"
 
 #include <stdint.h>
 
@@ -447,6 +446,32 @@ void ScriptLanguage::get_core_type_words(List<String> *p_core_type_words) const 
 }
 
 void ScriptLanguage::frame() {
+}
+TypedArray<int> ScriptLanguage::CodeCompletionOption::get_option_characteristics(String base) {
+	// return characacteristics of the matches found by order of importance
+	// matches will be ranked by a lexicographical order on the vector returned by this function
+	// the lower values indicate better matches and that they should go before in the order of appearance
+	if (last_matches == matches) {
+		return charac;
+	}
+	charac = TypedArray<int>();
+	charac.push_back(matches.size());
+	charac.push_back((matches[0].first == 0) ? 0 : 1);
+	charac.push_back(location);
+	const char32_t *target_char = &base[0];
+	int bad_case = 0;
+	for (const Pair<int, int> &match_segment : matches) {
+		const char32_t *string_to_complete_char = &display[match_segment.first];
+		for (int j = 0; j < match_segment.second; j++, string_to_complete_char++, target_char++) {
+			if (*string_to_complete_char != *target_char) {
+				bad_case++;
+			}
+		}
+	}
+	charac.push_back(bad_case);
+	charac.push_back(matches[0].first);
+	last_matches = matches;
+	return charac;
 }
 
 bool PlaceHolderScriptInstance::set(const StringName &p_name, const Variant &p_value) {

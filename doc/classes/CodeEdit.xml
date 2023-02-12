@@ -49,6 +49,7 @@
 			<param index="3" name="text_color" type="Color" default="Color(1, 1, 1, 1)" />
 			<param index="4" name="icon" type="Resource" default="null" />
 			<param index="5" name="value" type="Variant" default="0" />
+			<param index="6" name="location" type="int" enum="CodeEdit.CodeCompletionLocation" default="1024" />
 			<description>
 				Submits an item to the queue of potential candidates for the autocomplete menu. Call [method update_code_completion_options] to update the list.
 				[b]Note:[/b] This list will replace all current candidates.
@@ -550,6 +551,12 @@
 		</constant>
 		<constant name="KIND_PLAIN_TEXT" value="9" enum="CodeCompletionKind">
 			Marks the option as unclassified or plain text.
+		</constant>
+		<constant name="LOCATION_LOCAL" value="2" enum="CodeCompletionLocation">
+		</constant>
+		<constant name="LOCATION_BASE" value="4" enum="CodeCompletionLocation">
+		</constant>
+		<constant name="LOCATION_OTHER" value="1024" enum="CodeCompletionLocation">
 		</constant>
 	</constants>
 	<theme_items>
