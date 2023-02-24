@@ -578,6 +578,25 @@
 				[b]Note:[/b] Subgroups cannot be nested, they only provide one extra level of depth. Just like the next group ends the previous group, so do the subsequent subgroups.
 			</description>
 		</annotation>
+		<annotation name="@hint" qualifiers="vararg">
+			<return type="void" />
+			<param index="0" name="type_hint" type="int" />
+			<param index="1" name="custom_hints" type="String" />
+			<description>
+			</description>
+		</annotation>
+		<annotation name="@hint_string" qualifiers="vararg">
+			<return type="void" />
+			<param index="0" name="custom_hints" type="String" />
+			<description>
+			</description>
+		</annotation>
+		<annotation name="@hint_type">
+			<return type="void" />
+			<param index="0" name="type_hint" type="int" />
+			<description>
+			</description>
+		</annotation>
 		<annotation name="@icon">
 			<return type="void" />
 			<param index="0" name="icon_path" type="String" />

@@ -110,7 +110,9 @@ GDScriptParser::GDScriptParser() {
 	register_annotation(MethodInfo("@warning_ignore", PropertyInfo(Variant::STRING, "warning")), AnnotationInfo::CLASS | AnnotationInfo::VARIABLE | AnnotationInfo::SIGNAL | AnnotationInfo::CONSTANT | AnnotationInfo::FUNCTION | AnnotationInfo::STATEMENT, &GDScriptParser::warning_annotations, varray(), true);
 	// Networking.
 	register_annotation(MethodInfo("@rpc", PropertyInfo(Variant::STRING, "mode"), PropertyInfo(Variant::STRING, "sync"), PropertyInfo(Variant::STRING, "transfer_mode"), PropertyInfo(Variant::INT, "transfer_channel")), AnnotationInfo::FUNCTION, &GDScriptParser::rpc_annotation, varray("authority", "call_remote", "unreliable", 0), true);
-
+	register_annotation(MethodInfo("@hint_string", PropertyInfo(Variant::STRING, "custom_hints")), AnnotationInfo::VARIABLE, &GDScriptParser::hint_annotations, varray(), true);
+	register_annotation(MethodInfo("@hint_type", PropertyInfo(Variant::INT, "type_hint")), AnnotationInfo::VARIABLE, &GDScriptParser::hint_annotations);
+	register_annotation(MethodInfo("@hint", PropertyInfo(Variant::INT, "type_hint"), PropertyInfo(Variant::STRING, "custom_hints")), AnnotationInfo::VARIABLE, &GDScriptParser::hint_annotations, varray(), true);
 #ifdef DEBUG_ENABLED
 	is_ignoring_warnings = !(bool)GLOBAL_GET("debug/gdscript/warnings/enable");
 #endif
@@ -3944,6 +3946,47 @@ bool GDScriptParser::export_annotations(const AnnotationNode *p_annotation, Node
 		}
 	}
 
+	return true;
+}
+
+bool GDScriptParser::hint_annotations(const AnnotationNode *p_annotation, Node *p_node) {
+	ERR_FAIL_COND_V_MSG(p_node->type != Node::VARIABLE, false, vformat(R"("%s" annotation can only be applied to variables.)", p_annotation->name));
+
+	VariableNode *variable = static_cast<VariableNode *>(p_node);
+	if (!variable->exported) {
+		push_error(vformat(R"(Annotation "%s" cannot be used without another "@export" annotation.)", p_annotation->name), p_annotation);
+		return false;
+	}
+	int j = 0;
+	if (p_annotation->name != "@hint_string") {
+		variable->export_info.hint = static_cast<PropertyHint>(p_annotation->resolved_arguments[0].operator int64_t());
+		j = 1;
+	}
+
+	String hint_string;
+	for (int i = j; i < p_annotation->resolved_arguments.size(); i++) {
+		String arg_string = String(p_annotation->resolved_arguments[i]);
+
+		if (i > 0 || hint_string != "") {
+			hint_string += ",";
+		}
+		hint_string += arg_string;
+	}
+
+	DataType export_type = variable->get_datatype();
+	String opening_delimiter = "{";
+	String closing_delimiter = "}";
+	HashMap<String, String> Replacements;
+	Replacements["TYPE"] = Variant::get_type_name(export_type.builtin_type);
+	Replacements["HINT_STRING"] = variable->export_info.hint_string;
+	Replacements["TYPE_VALUE"] = itos(export_type.builtin_type);
+	Replacements["NATIVE_TYPE"] = export_type.native_type.operator String();
+
+	for (const KeyValue<String, String> &key_value_pair : Replacements) {
+		hint_string = hint_string.replace(opening_delimiter + key_value_pair.key + closing_delimiter, key_value_pair.value);
+	}
+
+	variable->export_info.hint_string = hint_string;
 	return true;
 }
 
