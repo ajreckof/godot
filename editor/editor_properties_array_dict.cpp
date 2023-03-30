@@ -333,8 +333,7 @@ void EditorPropertyArray::update_property() {
 		updating = true;
 
 		if (!container) {
-			container = memnew(MarginContainer);
-			container->set_theme_type_variation("MarginContainer4px");
+			container = memnew(PanelContainer);
 			add_child(container);
 			set_bottom_editor(container);
 
@@ -369,6 +368,8 @@ void EditorPropertyArray::update_property() {
 			paginator = memnew(EditorPaginator);
 			paginator->connect("page_changed", callable_mp(this, &EditorPropertyArray::_page_changed));
 			vbox->add_child(paginator);
+
+			_update_property_bg();
 		} else {
 			// Bye bye children of the box.
 			for (int i = property_vbox->get_child_count() - 1; i >= 0; i--) {
@@ -473,8 +474,46 @@ void EditorPropertyArray::update_property() {
 			memdelete(container);
 			button_add_item = nullptr;
 			container = nullptr;
+			_update_property_bg();
 		}
 	}
+}
+
+void EditorPropertyArray::_update_property_bg() {
+	if (!is_inside_tree()) {
+		return;
+	}
+
+	updating_theme = true;
+
+	if (container) {
+		int count_subinspectors = 0;
+		Node *n = this;
+		while (n) {
+			EditorProperty *ep = Object::cast_to<EditorProperty>(n);
+			if (ep) {
+				count_subinspectors++;
+			}
+			n = n->get_parent();
+		}
+		count_subinspectors = MIN(15, count_subinspectors - 1);
+
+		add_theme_color_override("property_color", get_theme_color(SNAME("sub_inspector_property_color"), SNAME("Editor")));
+		add_theme_style_override("bg_selected", get_theme_stylebox("sub_inspector_property_bg" + itos(count_subinspectors), SNAME("Editor")));
+		add_theme_style_override("bg", get_theme_stylebox("sub_inspector_property_bg" + itos(count_subinspectors), SNAME("Editor")));
+
+		add_theme_constant_override("v_separation", 0);
+
+		container->add_theme_style_override("panel", get_theme_stylebox("sub_inspector_bg" + itos(count_subinspectors), SNAME("Editor")));
+	} else {
+		add_theme_color_override("property_color", get_theme_color(SNAME("property_color"), SNAME("EditorProperty")));
+		add_theme_style_override("bg_selected", get_theme_stylebox(SNAME("bg_selected"), SNAME("EditorProperty")));
+		add_theme_style_override("bg", get_theme_stylebox(SNAME("bg"), SNAME("EditorProperty")));
+		add_theme_constant_override("v_separation", get_theme_constant(SNAME("v_separation"), SNAME("EditorProperty")));
+	}
+
+	updating_theme = false;
+	queue_redraw();
 }
 
 void EditorPropertyArray::_remove_pressed(int p_index) {
@@ -569,6 +608,10 @@ void EditorPropertyArray::drop_data_fw(const Point2 &p_point, const Variant &p_d
 void EditorPropertyArray::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_THEME_CHANGED:
+			if (!updating_theme) {
+				_update_property_bg();
+			}
+			[[fallthrough]];
 		case NOTIFICATION_ENTER_TREE: {
 			change_type->clear();
 			for (int i = 0; i < Variant::VARIANT_MAX; i++) {
@@ -844,6 +887,44 @@ void EditorPropertyDictionary::setup(PropertyHint p_hint) {
 	property_hint = p_hint;
 }
 
+void EditorPropertyDictionary::_update_property_bg() {
+	if (!is_inside_tree()) {
+		return;
+	}
+
+	updating_theme = true;
+
+	if (container) {
+		int count_subinspectors = 0;
+		Node *n = this;
+		while (n) {
+			EditorProperty *ep = Object::cast_to<EditorProperty>(n);
+			if (ep) {
+				count_subinspectors++;
+			}
+			n = n->get_parent();
+		}
+		count_subinspectors = MIN(15, count_subinspectors - 1);
+
+		add_theme_color_override("property_color", get_theme_color(SNAME("sub_inspector_property_color"), SNAME("Editor")));
+		add_theme_style_override("bg_selected", get_theme_stylebox("sub_inspector_property_bg" + itos(count_subinspectors), SNAME("Editor")));
+		add_theme_style_override("bg", get_theme_stylebox("sub_inspector_property_bg" + itos(count_subinspectors), SNAME("Editor")));
+
+		add_theme_constant_override("v_separation", 0);
+
+		container->add_theme_style_override("panel", get_theme_stylebox("sub_inspector_bg" + itos(count_subinspectors), SNAME("Editor")));
+		add_theme_style_override(SNAME("DictionaryAddItem"), get_theme_stylebox("DictionaryAddItem" + itos(count_subinspectors), SNAME("EditorStyles")));
+	} else {
+		add_theme_color_override("property_color", get_theme_color(SNAME("property_color"), SNAME("EditorProperty")));
+		add_theme_style_override("bg_selected", get_theme_stylebox(SNAME("bg_selected"), SNAME("EditorProperty")));
+		add_theme_style_override("bg", get_theme_stylebox(SNAME("bg"), SNAME("EditorProperty")));
+		add_theme_constant_override("v_separation", get_theme_constant(SNAME("v_separation"), SNAME("EditorProperty")));
+	}
+
+	updating_theme = false;
+	queue_redraw();
+}
+
 void EditorPropertyDictionary::update_property() {
 	Variant updated_val = get_edited_object()->get(get_edited_property());
 
@@ -873,8 +954,7 @@ void EditorPropertyDictionary::update_property() {
 		updating = true;
 
 		if (!container) {
-			container = memnew(MarginContainer);
-			container->set_theme_type_variation("MarginContainer4px");
+			container = memnew(PanelContainer);
 			add_child(container);
 			set_bottom_editor(container);
 
@@ -888,6 +968,7 @@ void EditorPropertyDictionary::update_property() {
 			paginator = memnew(EditorPaginator);
 			paginator->connect("page_changed", callable_mp(this, &EditorPropertyDictionary::_page_changed));
 			vbox->add_child(paginator);
+			_update_property_bg();
 		} else {
 			// Queue children for deletion, deleting immediately might cause errors.
 			for (int i = property_vbox->get_child_count() - 1; i >= 0; i--) {
@@ -921,7 +1002,7 @@ void EditorPropertyDictionary::update_property() {
 		if (page_index == max_page) {
 			PanelContainer *pc = memnew(PanelContainer);
 			property_vbox->add_child(pc);
-			pc->add_theme_style_override(SNAME("panel"), get_theme_stylebox(SNAME("DictionaryAddItem"), SNAME("EditorStyles")));
+			pc->add_theme_style_override(SNAME("panel"), get_theme_stylebox(SNAME("DictionaryAddItem")));
 			add_vbox = memnew(VBoxContainer);
 			pc->add_child(add_vbox);
 
@@ -947,6 +1028,7 @@ void EditorPropertyDictionary::update_property() {
 			memdelete(container);
 			button_add_item = nullptr;
 			container = nullptr;
+			_update_property_bg();
 		}
 	}
 }
@@ -1279,6 +1361,10 @@ void EditorPropertyDictionary::_object_id_selected(const StringName &p_property,
 void EditorPropertyDictionary::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_THEME_CHANGED:
+			if (!updating_theme) {
+				_update_property_bg();
+			}
+			[[fallthrough]];
 		case NOTIFICATION_ENTER_TREE: {
 			change_type->clear();
 			for (int i = 0; i < Variant::VARIANT_MAX; i++) {

@@ -1119,6 +1119,14 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 		bg_color->set_corner_radius(CORNER_BOTTOM_RIGHT, 0);
 
 		theme->set_stylebox("sub_inspector_property_bg" + itos(i), "Editor", bg_color);
+
+		// Dictionary editor add item.
+		// Expand to the left and right by 4px to compensate for the dictionary editor margins.
+		Color style_dictionary_bg_color = dark_color_3.lerp(si_base_color, 0.08);
+		Ref<StyleBoxFlat> style_dictionary_add_item = make_flat_stylebox(style_dictionary_bg_color, 0, 4, 0, 4, corner_radius);
+		style_dictionary_add_item->set_expand_margin(SIDE_LEFT, 2 * EDSCALE);
+		style_dictionary_add_item->set_expand_margin(SIDE_RIGHT, 2 * EDSCALE);
+		theme->set_stylebox("DictionaryAddItem" + itos(i), "EditorStyles", style_dictionary_add_item);
 	}
 
 	theme->set_color("sub_inspector_property_color", "Editor", dark_theme ? Color(1, 1, 1, 1) : Color(0, 0, 0, 1));
@@ -1890,13 +1898,6 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme_preview_picker_label_bg_color.set_v(0.5);
 	Ref<StyleBoxFlat> theme_preview_picker_label_sb = make_flat_stylebox(theme_preview_picker_label_bg_color, 4.0, 1.0, 4.0, 3.0);
 	theme->set_stylebox("preview_picker_label", "ThemeEditor", theme_preview_picker_label_sb);
-
-	// Dictionary editor add item.
-	// Expand to the left and right by 4px to compensate for the dictionary editor margins.
-	Ref<StyleBoxFlat> style_dictionary_add_item = make_flat_stylebox(prop_subsection_color, 0, 4, 0, 4, corner_radius);
-	style_dictionary_add_item->set_expand_margin(SIDE_LEFT, 4 * EDSCALE);
-	style_dictionary_add_item->set_expand_margin(SIDE_RIGHT, 4 * EDSCALE);
-	theme->set_stylebox("DictionaryAddItem", "EditorStyles", style_dictionary_add_item);
 
 	Ref<StyleBoxEmpty> vshader_label_style = make_empty_stylebox(2, 1, 2, 1);
 	theme->set_stylebox("label_style", "VShaderEditor", vshader_label_style);

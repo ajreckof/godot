@@ -3924,15 +3924,15 @@ void EditorPropertyResource::_update_property_bg() {
 
 	if (sub_inspector != nullptr) {
 		int count_subinspectors = 0;
-		Node *n = get_parent();
+		Node *n = this;
 		while (n) {
-			EditorInspector *ei = Object::cast_to<EditorInspector>(n);
-			if (ei && ei->is_sub_inspector()) {
+			EditorProperty *ep = Object::cast_to<EditorProperty>(n);
+			if (ep) {
 				count_subinspectors++;
 			}
 			n = n->get_parent();
 		}
-		count_subinspectors = MIN(15, count_subinspectors);
+		count_subinspectors = MIN(15, count_subinspectors - 1);
 
 		add_theme_color_override("property_color", get_theme_color(SNAME("sub_inspector_property_color"), SNAME("Editor")));
 		add_theme_style_override("bg_selected", get_theme_stylebox("sub_inspector_property_bg" + itos(count_subinspectors), SNAME("Editor")));

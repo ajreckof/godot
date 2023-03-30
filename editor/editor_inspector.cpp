@@ -3539,15 +3539,16 @@ void EditorInspector::set_use_wide_editors(bool p_enable) {
 void EditorInspector::_update_inspector_bg() {
 	if (sub_inspector) {
 		int count_subinspectors = 0;
-		Node *n = get_parent();
+		Node *n = this;
 		while (n) {
-			EditorInspector *ei = Object::cast_to<EditorInspector>(n);
-			if (ei && ei->sub_inspector) {
+			EditorProperty *ep = Object::cast_to<EditorProperty>(n);
+			if (ep) {
 				count_subinspectors++;
 			}
 			n = n->get_parent();
 		}
-		count_subinspectors = MIN(15, count_subinspectors);
+		count_subinspectors = MIN(15, count_subinspectors - 1);
+		print_line(count_subinspectors);
 		add_theme_style_override("panel", get_theme_stylebox("sub_inspector_bg" + itos(count_subinspectors), SNAME("Editor")));
 	} else {
 		add_theme_style_override("panel", get_theme_stylebox(SNAME("panel"), SNAME("Tree")));

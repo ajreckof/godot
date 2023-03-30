@@ -93,7 +93,7 @@ class EditorPropertyArray : public EditorProperty {
 	int page_index = 0;
 	int changing_type_index;
 	Button *edit = nullptr;
-	MarginContainer *container = nullptr;
+	PanelContainer *container = nullptr;
 	VBoxContainer *property_vbox = nullptr;
 	EditorSpinSlider *size_slider = nullptr;
 	Button *button_add_item = nullptr;
@@ -109,9 +109,13 @@ class EditorPropertyArray : public EditorProperty {
 	HBoxContainer *reorder_selected_element_hbox = nullptr;
 	Button *reorder_selected_button = nullptr;
 
+	bool updating_theme = false;
+
 	void initialize_array(Variant &p_array);
 
 	void _page_changed(int p_page);
+
+	void _update_property_bg();
 
 	void _reorder_button_gui_input(const Ref<InputEvent> &p_event);
 	void _reorder_button_down(int p_index);
@@ -167,12 +171,13 @@ private:
 	int page_index = 0;
 	int changing_type_index;
 	Button *edit = nullptr;
-	MarginContainer *container = nullptr;
+	PanelContainer *container = nullptr;
 	VBoxContainer *property_vbox = nullptr;
 	EditorSpinSlider *size_sliderv = nullptr;
 	Button *button_add_item = nullptr;
 	EditorPaginator *paginator = nullptr;
 	PropertyHint property_hint;
+	bool updating_theme = false;
 
 	void _page_changed(int p_page);
 	void _edit_pressed();
@@ -186,6 +191,7 @@ private:
 	void set_layout_direction_on_child(Node *node);
 	void item_menu_option(int p_option, int change_index);
 	void _update_item_popup(PopupMenu *menu, const int &change_index);
+	void _update_property_bg();
 
 protected:
 	static void _bind_methods();
