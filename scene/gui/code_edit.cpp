@@ -181,17 +181,21 @@ void CodeEdit::_notification(int p_what) {
 				}
 				Size2 minsize = theme_cache.code_hint_style->get_minimum_size() + Size2(max_width, line_count * font_height + (theme_cache.line_spacing * line_count - 1));
 
-				Point2i line_column_caret_pos = get_line_column_at_pos(caret_pos);
-				String line = get_line(line_column_caret_pos.y);
-				for (int i = line_column_caret_pos.x - 1; i >= 0; i--) {
-					if (line[i] == '(' || line[i] == ',' || line[i] == '\t') {
-						line_column_caret_pos.x = i + 1;
-						break;
-					}
-				}
 				Point2 hint_ofs;
 				if (code_hint_xpos == -0xFFFF) {
+					Point2i line_column_caret_pos = get_line_column_at_pos(caret_pos);
+					String line = get_line(line_column_caret_pos.y);
+					for (int i = line_column_caret_pos.x - 1; i >= 0; i--) {
+						if (line[i] == '(' || line[i] == ',' || line[i] == '\t') {
+							line_column_caret_pos.x = i + 1;
+							break;
+						}
+					}
 					hint_ofs = get_pos_at_line_column(line_column_caret_pos.y, line_column_caret_pos.x);
+					code_hint_xpos = hint_ofs.x;
+				} else {
+					hint_ofs = caret_pos;
+					hint_ofs.x = code_hint_xpos;
 				}
 				hint_ofs.x -= theme_cache.font->get_string_size(code_hint_lines[0].substr(0, code_hint_lines[0].find(String::chr(0xFFFF))), HORIZONTAL_ALIGNMENT_LEFT, -1, theme_cache.font_size).x;
 				if (code_hint_draw_below) {

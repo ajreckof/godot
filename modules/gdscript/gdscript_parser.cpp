@@ -216,7 +216,7 @@ void GDScriptParser::start_code_hint_context() {
 }
 
 void GDScriptParser::end_code_hint_context(Node *p_call_node, int p_argument) {
-	if (tokenizer.is_past_cursor() && current.cursor_place == GDScriptTokenizer::CURSOR_NONE) {
+	if (tokenizer.is_past_cursor() && current.cursor_place != GDScriptTokenizer::CURSOR_END) {
 		if (start_past_cursor_min_depth == 0) {
 			start_past_cursor_min_depth = code_hint_depth + 1;
 		}
