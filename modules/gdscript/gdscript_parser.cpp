@@ -194,23 +194,69 @@ void GDScriptParser::push_warning(const Node *p_source, GDScriptWarning::Code p_
 	}
 }
 #endif
+bool GDScriptParser::is_cursor_in_region(CompletionContextRegion region) {
+	switch (region) {
+		case CompletionContextRegion::CURRENT:
+			return previous.cursor_place == GDScriptTokenizer::CURSOR_MIDDLE || previous.cursor_place == GDScriptTokenizer::CURSOR_END || current.cursor_place != GDScriptTokenizer::CURSOR_NONE;
+			break;
+		case CompletionContextRegion::BETWEEN:
+			return previous.cursor_place == GDScriptTokenizer::CURSOR_END || current.cursor_place == GDScriptTokenizer::CURSOR_BEGINNING;
+			break;
+		case CompletionContextRegion::PREVIOUS:
+			return current.cursor_place == GDScriptTokenizer::CURSOR_MIDDLE || current.cursor_place == GDScriptTokenizer::CURSOR_BEGINNING || previous.cursor_place != GDScriptTokenizer::CURSOR_NONE;
+			break;
+	}
+}
 
-void GDScriptParser::make_completion_context(CompletionType p_type, Node *p_node, int p_argument, bool p_force) {
+void GDScriptParser::start_code_hint_context() {
+	code_hint_depth++;
+	if (tokenizer.is_past_cursor() && current.cursor_place == GDScriptTokenizer::CURSOR_NONE && (start_past_cursor_min_depth == 0 || start_past_cursor_min_depth > code_hint_depth)) {
+		start_past_cursor_min_depth = code_hint_depth;
+	}
+}
+
+void GDScriptParser::end_code_hint_context(Node *p_call_node, int p_argument) {
+	if (tokenizer.is_past_cursor() && current.cursor_place == GDScriptTokenizer::CURSOR_NONE) {
+		if (start_past_cursor_min_depth == 0) {
+			start_past_cursor_min_depth = code_hint_depth + 1;
+		}
+		// make sure the code hint is about the one the more in depth
+		if (start_past_cursor_min_depth == code_hint_depth + 1) {
+			CompletionContext context;
+			if (completion_context.type == COMPLETION_NONE) {
+				context.current_class = current_class;
+				context.current_function = current_function;
+				context.current_suite = current_suite;
+				context.current_line = tokenizer.get_cursor_line();
+				context.current_argument = p_argument;
+				context.node = p_call_node;
+				completion_context = context;
+			} else {
+				context = completion_context;
+			}
+			context.code_hint_argument = p_argument;
+			context.code_hint_call_node = p_call_node;
+			completion_context = context;
+		}
+	}
+	code_hint_depth--;
+}
+
+void GDScriptParser::make_completion_context(CompletionType p_type, Node *p_node, int p_argument, bool p_force, CompletionContextRegion region) {
 	if (!for_completion || (!p_force && completion_context.type != COMPLETION_NONE)) {
 		return;
 	}
-	if (previous.cursor_place != GDScriptTokenizer::CURSOR_MIDDLE && previous.cursor_place != GDScriptTokenizer::CURSOR_END && current.cursor_place == GDScriptTokenizer::CURSOR_NONE) {
-		return;
+	if (is_cursor_in_region(region)) {
+		CompletionContext context;
+		context.type = p_type;
+		context.current_class = current_class;
+		context.current_function = current_function;
+		context.current_suite = current_suite;
+		context.current_line = tokenizer.get_cursor_line();
+		context.current_argument = p_argument;
+		context.node = p_node;
+		completion_context = context;
 	}
-	CompletionContext context;
-	context.type = p_type;
-	context.current_class = current_class;
-	context.current_function = current_function;
-	context.current_suite = current_suite;
-	context.current_line = tokenizer.get_cursor_line();
-	context.current_argument = p_argument;
-	context.node = p_node;
-	completion_context = context;
 }
 
 void GDScriptParser::make_completion_context(CompletionType p_type, Variant::Type p_builtin_type, bool p_force) {
@@ -2919,14 +2965,14 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 			push_error(R"*(Cannot call on an expression. Use ".call()" if it's a Callable.)*");
 		} else if (call->callee->type == Node::IDENTIFIER) {
 			call->function_name = static_cast<IdentifierNode *>(call->callee)->name;
-			make_completion_context(COMPLETION_METHOD, call->callee);
+			make_completion_context(COMPLETION_METHOD, call->callee, -1, false, CompletionContextRegion::PREVIOUS);
 		} else if (call->callee->type == Node::SUBSCRIPT) {
 			SubscriptNode *attribute = static_cast<SubscriptNode *>(call->callee);
 			if (attribute->is_attribute) {
 				if (attribute->attribute) {
 					call->function_name = attribute->attribute->name;
 				}
-				make_completion_context(COMPLETION_ATTRIBUTE_METHOD, call->callee);
+				make_completion_context(COMPLETION_ATTRIBUTE_METHOD, call->callee, -1, false, CompletionContextRegion::PREVIOUS);
 			} else {
 				// TODO: The analyzer can see if this is actually a Callable and give better error message.
 				push_error(R"*(Cannot call on an expression. Use ".call()" if it's a Callable.)*");
@@ -2944,13 +2990,18 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 	push_completion_call(call);
 	int argument_index = 0;
 	do {
-		make_completion_context(ct, call, argument_index++, true);
+		start_code_hint_context();
 		if (check(GDScriptTokenizer::Token::PARENTHESIS_CLOSE)) {
+			make_completion_context(ct, call, argument_index, true, CompletionContextRegion::BETWEEN);
+			end_code_hint_context(call, argument_index++);
 			// Allow for trailing comma.
 			break;
 		}
+		make_completion_context(ct, call, argument_index, true);
 		bool use_identifier_completion = current.cursor_place == GDScriptTokenizer::CURSOR_END || current.cursor_place == GDScriptTokenizer::CURSOR_MIDDLE;
 		ExpressionNode *argument = parse_expression(false);
+
+		end_code_hint_context(call, argument_index++);
 		if (argument == nullptr) {
 			push_error(R"(Expected expression as the function argument.)");
 		} else {

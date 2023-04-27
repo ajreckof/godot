@@ -3069,6 +3069,10 @@ static void _find_call_arguments(GDScriptParser::CompletionContext &p_context, c
 		r_options->push_back(E.value);
 	}
 
+	if (completion_context.code_hint_call_node) {
+		_find_call_arguments(completion_context, completion_context.code_hint_call_node, completion_context.code_hint_argument, options, r_forced, r_call_hint);
+	}
+
 	return OK;
 }
 

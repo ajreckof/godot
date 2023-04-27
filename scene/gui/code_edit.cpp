@@ -48,6 +48,7 @@ void CodeEdit::_notification(int p_what) {
 			const bool caret_visible = is_caret_visible();
 			const bool rtl = is_layout_rtl();
 			const int row_height = get_line_height();
+			const Point2 caret_pos = get_caret_draw_pos();
 
 			if (line_length_guideline_columns.size() > 0) {
 				const int xmargin_beg = theme_cache.style_normal->get_margin(SIDE_LEFT) + get_total_gutter_width();
@@ -76,7 +77,6 @@ void CodeEdit::_notification(int p_what) {
 				code_completion_rect.size.width = code_completion_longest_line + theme_cache.code_completion_icon_separation + icon_area_size.width + 2;
 				code_completion_rect.size.height = lines * row_height;
 
-				const Point2 caret_pos = get_caret_draw_pos();
 				const int total_height = theme_cache.code_completion_style->get_minimum_size().y + code_completion_rect.size.height;
 				const bool can_fit_completion_above = (caret_pos.y - row_height > total_height);
 				const bool can_fit_completion_below = (caret_pos.y + row_height + total_height <= get_size().height);
@@ -163,7 +163,13 @@ void CodeEdit::_notification(int p_what) {
 			}
 
 			/* Code hint */
-			if (caret_visible && !code_hint.is_empty() && (!code_completion_active || (code_completion_below != code_hint_draw_below))) {
+
+			if (caret_visible && !code_hint.is_empty()) {
+				bool code_hint_draw_below = code_hint_draw_below_setting;
+				if (code_completion_active && code_completion_options.size() > 0) {
+					code_hint_draw_below = !code_completion_below;
+				}
+
 				const int font_height = theme_cache.font->get_height(theme_cache.font_size);
 
 				Vector<String> code_hint_lines = code_hint.split("\n");
@@ -175,11 +181,19 @@ void CodeEdit::_notification(int p_what) {
 				}
 				Size2 minsize = theme_cache.code_hint_style->get_minimum_size() + Size2(max_width, line_count * font_height + (theme_cache.line_spacing * line_count - 1));
 
-				int offset = theme_cache.font->get_string_size(code_hint_lines[0].substr(0, code_hint_lines[0].find(String::chr(0xFFFF))), HORIZONTAL_ALIGNMENT_LEFT, -1, theme_cache.font_size).x;
-				if (code_hint_xpos == -0xFFFF) {
-					code_hint_xpos = get_caret_draw_pos().x - offset;
+				Point2i line_column_caret_pos = get_line_column_at_pos(caret_pos);
+				String line = get_line(line_column_caret_pos.y);
+				for (int i = line_column_caret_pos.x - 1; i >= 0; i--) {
+					if (line[i] == '(' || line[i] == ',' || line[i] == '\t') {
+						line_column_caret_pos.x = i + 1;
+						break;
+					}
 				}
-				Point2 hint_ofs = Vector2(code_hint_xpos, get_caret_draw_pos().y);
+				Point2 hint_ofs;
+				if (code_hint_xpos == -0xFFFF) {
+					hint_ofs = get_pos_at_line_column(line_column_caret_pos.y, line_column_caret_pos.x);
+				}
+				hint_ofs.x -= theme_cache.font->get_string_size(code_hint_lines[0].substr(0, code_hint_lines[0].find(String::chr(0xFFFF))), HORIZONTAL_ALIGNMENT_LEFT, -1, theme_cache.font_size).x;
 				if (code_hint_draw_below) {
 					hint_ofs.y += theme_cache.line_spacing / 2.0f;
 				} else {
@@ -349,7 +363,6 @@ void CodeEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		}
 
 		cancel_code_completion();
-		set_code_hint("");
 
 		if (mb->is_pressed()) {
 			Vector2i mpos = mb->get_position();
@@ -566,9 +579,6 @@ void CodeEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		set_code_hint("");
 		accept_event();
 		return;
-	}
-	if (allow_unicode_handling && k->get_unicode() == ')') {
-		set_code_hint("");
 	}
 
 	/* Indentation */
@@ -1825,7 +1835,7 @@ void CodeEdit::set_code_hint(const String &p_hint) {
 }
 
 void CodeEdit::set_code_hint_draw_below(bool p_below) {
-	code_hint_draw_below = p_below;
+	code_hint_draw_below_setting = p_below;
 	queue_redraw();
 }
 
@@ -1906,19 +1916,7 @@ void CodeEdit::request_code_completion(bool p_force) {
 		return;
 	}
 
-	if (p_force) {
-		emit_signal(SNAME("code_completion_requested"));
-		return;
-	}
-
-	String line = get_line(get_caret_line());
-	int ofs = CLAMP(get_caret_column(), 0, line.length());
-
-	if (ofs > 0 && (is_in_string(get_caret_line(), ofs) != -1 || !is_symbol(line[ofs - 1]) || code_completion_prefixes.has(line[ofs - 1]))) {
-		emit_signal(SNAME("code_completion_requested"));
-	} else if (ofs > 1 && line[ofs - 1] == ' ' && code_completion_prefixes.has(line[ofs - 2])) {
-		emit_signal(SNAME("code_completion_requested"));
-	}
+	emit_signal(SNAME("code_completion_requested"));
 }
 
 void CodeEdit::add_code_completion_option(CodeCompletionKind p_type, const String &p_display_text, const String &p_insert_text, const Color &p_text_color, const Ref<Resource> &p_icon, const Variant &p_value) {
@@ -1998,7 +1996,6 @@ void CodeEdit::confirm_code_completion(bool p_replace) {
 		return;
 	}
 
-	char32_t caret_last_completion_char = 0;
 	begin_complex_operation();
 	Vector<int> caret_edit_order = get_caret_index_edit_order();
 	for (const int &i : caret_edit_order) {
@@ -2064,9 +2061,6 @@ void CodeEdit::confirm_code_completion(bool p_replace) {
 		const String line = get_line(caret_line);
 		char32_t next_char = line[get_caret_column(i)];
 		char32_t last_completion_char = insert_text[insert_text.length() - 1];
-		if (i == 0) {
-			caret_last_completion_char = last_completion_char;
-		}
 		char32_t last_completion_char_display = display_text[display_text.length() - 1];
 
 		bool last_char_matches = (last_completion_char == next_char || last_completion_char_display == next_char);
@@ -2102,10 +2096,9 @@ void CodeEdit::confirm_code_completion(bool p_replace) {
 	}
 	end_complex_operation();
 
+	// cancel and restart code completion so that it does not reappear if it is not needed
 	cancel_code_completion();
-	if (code_completion_prefixes.has(caret_last_completion_char)) {
-		request_code_completion();
-	}
+	request_code_completion();
 }
 
 void CodeEdit::cancel_code_completion() {
@@ -2910,7 +2903,6 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 
 	int cofs = caret_column;
 	String string_to_complete;
-	bool prev_is_word = false;
 
 	/* Cancel if we are at the close of a string. */
 	if (caret_column > 0 && in_string == -1 && first_quote_col == cofs - 1) {
@@ -2926,7 +2918,6 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 		while (ofs > 0 && line[ofs] == ' ') {
 			ofs--;
 		}
-		prev_is_word = !is_symbol(line[ofs]);
 		/* Otherwise get current word and set cofs to the start. */
 	} else {
 		int start_cofs = cofs;
@@ -2934,20 +2925,6 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 			cofs--;
 		}
 		string_to_complete = line.substr(cofs, start_cofs - cofs);
-	}
-
-	/* If all else fails, check for a prefix.         */
-	/* Single space between caret and prefix is okay. */
-	bool prev_is_prefix = false;
-	if (cofs > 0 && code_completion_prefixes.has(line[cofs - 1])) {
-		prev_is_prefix = true;
-	} else if (cofs > 1 && line[cofs - 1] == ' ' && code_completion_prefixes.has(line[cofs - 2])) {
-		prev_is_prefix = true;
-	}
-
-	if (!prev_is_word && string_to_complete.is_empty() && (cofs == 0 || !prev_is_prefix)) {
-		cancel_code_completion();
-		return;
 	}
 
 	/* Filter Options. */
@@ -3138,8 +3115,8 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 		return;
 	}
 
-	/* A perfect match, stop completion. */
-	if (code_completion_options.size() == 1 && string_to_complete == code_completion_options[0].display) {
+	/* A perfect match, stop completion if its the only match or we were not already in code completion. */
+	if ((code_completion_options.size() == 1 || !code_completion_active) && string_to_complete == code_completion_options[0].display) {
 		cancel_code_completion();
 		return;
 	}

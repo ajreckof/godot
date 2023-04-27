@@ -1253,6 +1253,8 @@ public:
 		SuiteNode *current_suite = nullptr;
 		int current_line = -1;
 		int current_argument = -1;
+		int code_hint_argument = -1;
+		Node *code_hint_call_node = nullptr;
 		Variant::Type builtin_type = Variant::VARIANT_MAX;
 		Node *node = nullptr;
 		Object *base = nullptr;
@@ -1298,6 +1300,8 @@ private:
 	CompletionCall completion_call;
 	List<CompletionCall> completion_call_stack;
 	bool passed_cursor = false;
+	int start_past_cursor_min_depth = 0;
+	int code_hint_depth = 0;
 	bool in_lambda = false;
 	bool lambda_ended = false; // Marker for when a lambda ends, to apply an end of statement if needed.
 
@@ -1384,8 +1388,15 @@ private:
 		push_warning(p_source, p_code, Vector<String>{ p_symbols... });
 	}
 #endif
-
-	void make_completion_context(CompletionType p_type, Node *p_node, int p_argument = -1, bool p_force = false);
+	enum CompletionContextRegion {
+		PREVIOUS,
+		BETWEEN,
+		CURRENT,
+	};
+	bool is_cursor_in_region(CompletionContextRegion region);
+	void start_code_hint_context();
+	void end_code_hint_context(Node *call_node, int argument_index);
+	void make_completion_context(CompletionType p_type, Node *p_node, int p_argument = -1, bool p_force = false, CompletionContextRegion region = CompletionContextRegion::CURRENT);
 	void make_completion_context(CompletionType p_type, Variant::Type p_builtin_type, bool p_force = false);
 	void push_completion_call(Node *p_call);
 	void pop_completion_call();

@@ -882,8 +882,11 @@ void CodeTextEditor::_reset_zoom() {
 }
 
 void CodeTextEditor::_line_col_changed() {
-	if (!code_complete_timer->is_stopped() && code_complete_timer_line != text_editor->get_caret_line()) {
-		code_complete_timer->stop();
+	code_complete_timer_line = text_editor->get_caret_line();
+	if (code_complete_timer->is_inside_tree()) {
+		code_complete_timer->start();
+	} else { // if not in tree (most likely we are just opening the script) we can't start it yet so we wait for it to be inside tree and start it then thanks to autostart.
+		code_complete_timer->set_autostart(true);
 	}
 
 	String line = text_editor->get_line(text_editor->get_caret_line());
@@ -914,11 +917,6 @@ void CodeTextEditor::_line_col_changed() {
 }
 
 void CodeTextEditor::_text_changed() {
-	if (text_editor->is_insert_text_operation()) {
-		code_complete_timer_line = text_editor->get_caret_line();
-		code_complete_timer->start();
-	}
-
 	idle->start();
 
 	if (find_replace_bar) {
@@ -940,9 +938,6 @@ void CodeTextEditor::_complete_request() {
 	bool forced = false;
 	if (code_complete_func) {
 		code_complete_func(code_complete_ud, ctext, &entries, forced);
-	}
-	if (entries.size() == 0) {
-		return;
 	}
 
 	for (const ScriptLanguage::CodeCompletionOption &e : entries) {

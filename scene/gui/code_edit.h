@@ -182,7 +182,7 @@ private:
 	/* Code Hint */
 	String code_hint = "";
 
-	bool code_hint_draw_below = true;
+	bool code_hint_draw_below_setting = true;
 	int code_hint_xpos = -0xFFFF;
 
 	/* Code Completion */
