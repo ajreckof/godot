@@ -724,7 +724,7 @@ void EditorProperty::gui_input(const Ref<InputEvent> &p_event) {
 		}
 	} else if (mb.is_valid() && mb->is_pressed() && mb->get_button_index() == MouseButton::RIGHT) {
 		accept_event();
-		_update_popup();
+		request_popup_refresh();
 		menu->set_position(get_screen_position() + get_local_mouse_position());
 		menu->reset_size();
 		menu->popup();
@@ -949,6 +949,13 @@ Control *EditorProperty::make_custom_tooltip(const String &p_text) const {
 }
 
 void EditorProperty::menu_option(int p_option) {
+	Callable::CallError ce;
+	Variant ret, option = p_option;
+	const Variant *args[1] = { &option };
+	menu_option_callable.callp(args, 1, ret, ce);
+}
+
+void EditorProperty::_menu_option(int p_option) {
 	switch (p_option) {
 		case MENU_COPY_VALUE: {
 			InspectorDock::get_inspector_singleton()->set_property_clipboard(object->get(property));
@@ -1000,6 +1007,7 @@ void EditorProperty::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_focusable", "control"), &EditorProperty::add_focusable);
 	ClassDB::bind_method(D_METHOD("set_bottom_editor", "editor"), &EditorProperty::set_bottom_editor);
 
+	ClassDB::bind_method(D_METHOD("request_popup_refresh"), &EditorProperty::request_popup_refresh);
 	ClassDB::bind_method(D_METHOD("emit_changed", "property", "value", "field", "changing"), &EditorProperty::emit_changed, DEFVAL(StringName()), DEFVAL(false));
 
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "label"), "set_label", "get_label");
@@ -1021,7 +1029,6 @@ void EditorProperty::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("resource_selected", PropertyInfo(Variant::STRING, "path"), PropertyInfo(Variant::OBJECT, "resource", PROPERTY_HINT_RESOURCE_TYPE, "Resource")));
 	ADD_SIGNAL(MethodInfo("object_id_selected", PropertyInfo(Variant::STRING_NAME, "property"), PropertyInfo(Variant::INT, "id")));
 	ADD_SIGNAL(MethodInfo("selected", PropertyInfo(Variant::STRING, "path"), PropertyInfo(Variant::INT, "focusable_idx")));
-
 	GDVIRTUAL_BIND(_update_property)
 	GDVIRTUAL_BIND(_set_read_only, "read_only")
 
@@ -1040,7 +1047,7 @@ EditorProperty::EditorProperty() {
 	set_process_shortcut_input(true);
 }
 
-void EditorProperty::_update_popup() {
+void EditorProperty::request_popup_refresh() {
 	if (menu) {
 		menu->clear();
 	} else {
@@ -1048,6 +1055,11 @@ void EditorProperty::_update_popup() {
 		add_child(menu);
 		menu->connect("id_pressed", callable_mp(this, &EditorProperty::menu_option));
 	}
+
+	update_popup.callv({});
+}
+
+void EditorProperty::_update_popup() {
 	menu->add_icon_shortcut(get_theme_icon(SNAME("ActionCopy"), SNAME("EditorIcons")), ED_GET_SHORTCUT("property_editor/copy_value"), MENU_COPY_VALUE);
 	menu->add_icon_shortcut(get_theme_icon(SNAME("ActionPaste"), SNAME("EditorIcons")), ED_GET_SHORTCUT("property_editor/paste_value"), MENU_PASTE_VALUE);
 	menu->add_icon_shortcut(get_theme_icon(SNAME("CopyNodePath"), SNAME("EditorIcons")), ED_GET_SHORTCUT("property_editor/copy_property_path"), MENU_COPY_PROPERTY_PATH);

@@ -51,6 +51,11 @@
 				Gets the edited property. If your editor is for a single property (added via [method EditorInspectorPlugin._parse_property]), then this will return the property.
 			</description>
 		</method>
+		<method name="request_popup_refresh">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
 		<method name="set_bottom_editor">
 			<return type="void" />
 			<param index="0" name="editor" type="Control" />

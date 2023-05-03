@@ -104,6 +104,10 @@ private:
 	bool draw_top_bg = true;
 
 	void _update_popup();
+	Callable update_popup = callable_mp(this, &EditorProperty::_update_popup);
+	void _menu_option(int p_option);
+	Callable menu_option_callable = callable_mp(this, &EditorProperty::_menu_option);
+
 	void _focusable_focused(int p_index);
 
 	bool selectable = true;
@@ -138,6 +142,7 @@ protected:
 
 public:
 	void emit_changed(const StringName &p_property, const Variant &p_value, const StringName &p_field = StringName(), bool p_changing = false);
+	void request_popup_refresh();
 
 	virtual Size2 get_minimum_size() const override;
 
