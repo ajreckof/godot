@@ -1074,7 +1074,7 @@ void SceneTreeEditor::rename_node(Node *p_node, const String &p_name, TreeItem *
 
 	// We previously made sure name is not the same as current name so that it won't complain about already used unique name when not changing name.
 	if (p_node->is_unique_name_in_owner() && get_tree()->get_edited_scene_root()->get_node_or_null("%" + new_name)) {
-		String text = TTR("Another node already uses this unique name in the scene.");
+		String text = vformat(TTR("A node with the unique name %s already exists in this scene."), new_name);
 		if (error->is_visible()) {
 			if (!error->get_meta("same_unique_name", false)) {
 				error->set_text(error->get_text() + "\n\n" + text);
@@ -1130,57 +1130,18 @@ void SceneTreeEditor::_edited() {
 		undo_redo->create_action(TTR("Rename Nodes"), UndoRedo::MERGE_DISABLE, nodes_to_rename.front()->get(), true);
 
 		TreeItem *item = which;
+		String new_name = which->get_text(0);
 		for (Node *n : nodes_to_rename) {
-			_renamed(item, which, n);
+			rename_node(n, new_name, item);
 			item = tree->get_next_selected(item);
 		}
-		which->remove_meta("use_class");
+
 		undo_redo->commit_action();
 	} else {
-		_renamed(which, nullptr);
+		Node *n = get_node(which->get_metadata(0));
+		ERR_FAIL_NULL(n);
+		rename_node(n, which->get_text(0));
 	}
-}
-
-void SceneTreeEditor::_renamed(TreeItem *p_item, TreeItem *p_batch_item, Node *p_node) {
-	Node *n;
-	if (p_node) {
-		n = p_node; // During batch rename the paths may change, so using metadata is unreliable.
-	} else {
-		n = get_node(p_item->get_metadata(0));
-	}
-	ERR_FAIL_NULL(n);
-
-	String new_name;
-	if (p_batch_item) {
-		if (!p_batch_item->get_meta(SNAME("use_class"), false)) {
-			new_name = p_batch_item->get_text(0);
-		}
-	} else {
-		new_name = p_item->get_text(0);
-	}
-
-	if (new_name.strip_edges().is_empty()) {
-		// If name is empty, fallback to class name.
-		if (int(GLOBAL_GET("editor/naming/node_name_casing")) != NAME_CASING_PASCAL_CASE) {
-			new_name = Node::adjust_name_casing(n->get_class());
-		} else {
-			new_name = n->get_class();
-		}
-
-		// When doing batch rename, rename all nodes to their respective class.
-		if (p_batch_item == p_item) {
-			p_batch_item->set_meta("use_class", true);
-		}
-	}
-
-	if (n->is_unique_name_in_owner() && get_tree()->get_edited_scene_root()->get_node_or_null("%" + new_name) != nullptr) {
-		error->set_text(vformat(TTR("A node with the unique name %s already exists in this scene."), new_name));
-		error->popup_centered();
-		p_item->set_text(0, n->get_name());
-		return;
-	}
-
-	rename_node(n, new_name, p_item);
 }
 
 Node *SceneTreeEditor::get_selected() {
