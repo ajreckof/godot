@@ -398,13 +398,15 @@ void ResourceLoader::_thread_load_function(void *p_userdata) {
 }
 
 static String _validate_local_path(const String &p_path) {
-	ResourceUID::ID uid = ResourceUID::get_singleton()->text_to_id(p_path);
+	String path = p_path;
+	if (p_path.is_relative_path()) {
+		path = "res://" + p_path;
+	}
+	ResourceUID::ID uid = ResourceUID::get_singleton()->text_to_id(path);
 	if (uid != ResourceUID::INVALID_ID) {
 		return ResourceUID::get_singleton()->get_id_path(uid);
-	} else if (p_path.is_relative_path()) {
-		return "res://" + p_path;
 	} else {
-		return ProjectSettings::get_singleton()->localize_path(p_path);
+		return ProjectSettings::get_singleton()->localize_path(path);
 	}
 }
 
