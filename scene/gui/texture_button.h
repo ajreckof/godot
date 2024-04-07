@@ -33,10 +33,19 @@
 
 #include "scene/gui/base_button.h"
 #include "scene/resources/bit_map.h"
+
+#include "core/variant/struct.h"
+
 class TextureButton : public BaseButton {
 	GDCLASS(TextureButton, BaseButton);
 
 public:
+	Struct<PropertyInfo> struct_test;
+	Struct<PropertyInfo> get_struct_test() { return struct_test; };
+	void set_struct_test(Struct<PropertyInfo> p_struct_test) { struct_test = p_struct_test; };
+	TypedArray<Struct<PropertyInfo>> struct_test_array;
+	TypedArray<Struct<PropertyInfo>> get_struct_test_array() { return struct_test_array; };
+	void set_struct_test_array(TypedArray<Struct<PropertyInfo>> p_struct_test_array) { struct_test_array = p_struct_test_array; };
 	enum StretchMode {
 		STRETCH_SCALE,
 		STRETCH_TILE,

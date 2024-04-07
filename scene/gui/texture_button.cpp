@@ -271,6 +271,10 @@ void TextureButton::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_click_mask"), &TextureButton::get_click_mask);
 	ClassDB::bind_method(D_METHOD("get_ignore_texture_size"), &TextureButton::get_ignore_texture_size);
 	ClassDB::bind_method(D_METHOD("get_stretch_mode"), &TextureButton::get_stretch_mode);
+	ClassDB::bind_method(D_METHOD("get_struct_test"), &TextureButton::get_struct_test);
+	ClassDB::bind_method(D_METHOD("set_struct_test"), &TextureButton::set_struct_test);
+	ClassDB::bind_method(D_METHOD("get_struct_test_array"), &TextureButton::get_struct_test_array);
+	ClassDB::bind_method(D_METHOD("set_struct_test_array"), &TextureButton::set_struct_test_array);
 
 	ADD_GROUP("Textures", "texture_");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "texture_normal", PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_normal", "get_texture_normal");
@@ -283,6 +287,8 @@ void TextureButton::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "stretch_mode", PROPERTY_HINT_ENUM, "Scale,Tile,Keep,Keep Centered,Keep Aspect,Keep Aspect Centered,Keep Aspect Covered"), "set_stretch_mode", "get_stretch_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "flip_h", PROPERTY_HINT_RESOURCE_TYPE, "bool"), "set_flip_h", "is_flipped_h");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "flip_v", PROPERTY_HINT_RESOURCE_TYPE, "bool"), "set_flip_v", "is_flipped_v");
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "struct_test", PROPERTY_HINT_STRUCT, "PropertyInfo"), "set_struct_test", "get_struct_test");
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "struct_test_array", PROPERTY_HINT_ARRAY_TYPE, MAKE_STRUCT_TYPE_HINT("PropertyInfo")), "set_struct_test_array", "get_struct_test_array");
 
 	BIND_ENUM_CONSTANT(STRETCH_SCALE);
 	BIND_ENUM_CONSTANT(STRETCH_TILE);

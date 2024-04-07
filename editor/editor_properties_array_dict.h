@@ -53,6 +53,21 @@ public:
 
 	EditorPropertyArrayObject();
 };
+class EditorPropertyStructObject : public RefCounted {
+	GDCLASS(EditorPropertyStructObject, RefCounted);
+
+	Array array;
+
+protected:
+	bool _set(const StringName &p_name, const Variant &p_value);
+	bool _get(const StringName &p_name, Variant &r_ret) const;
+
+public:
+	void set_array(const Array &p_array);
+	Array get_array();
+
+	EditorPropertyStructObject();
+};
 
 class EditorPropertyDictionaryObject : public RefCounted {
 	GDCLASS(EditorPropertyDictionaryObject, RefCounted);
@@ -165,6 +180,59 @@ public:
 	void setup(Variant::Type p_array_type, const String &p_hint_string = "");
 	virtual void update_property() override;
 	EditorPropertyArray();
+};
+class EditorPropertyStruct : public EditorProperty {
+	GDCLASS(EditorPropertyStruct, EditorProperty);
+
+	struct Slot {
+		Ref<EditorPropertyStructObject> object;
+		HBoxContainer *container = nullptr;
+		int index = -1;
+		Variant::Type type = Variant::VARIANT_MAX;
+		bool as_id = false;
+		EditorProperty *prop = nullptr;
+
+		void set_index(int p_idx) {
+			String prop_name = "indices/" + itos(p_idx);
+			prop->set_object_and_property(object.ptr(), prop_name);
+			prop->set_label(object->get_array().get_member_name(p_idx));
+			index = p_idx;
+		}
+	};
+
+	Button *edit = nullptr;
+	MarginContainer *container = nullptr;
+	VBoxContainer *property_vbox = nullptr;
+	String type_hint_string;
+	LocalVector<Slot> slots;
+
+	void initialize_array(Variant &p_array);
+
+	void _create_new_property_slot();
+
+protected:
+	Ref<EditorPropertyStructObject> object;
+
+	bool updating = false;
+	bool dropping = false;
+
+	static void _bind_methods();
+	void _notification(int p_what);
+
+	virtual void _edit_pressed();
+	virtual void _property_changed(const String &p_property, Variant p_value, const String &p_name = "", bool p_changing = false);
+
+	virtual void _object_id_selected(const StringName &p_property, ObjectID p_id);
+
+	virtual void _button_draw();
+	virtual bool _is_drop_valid(const Dictionary &p_drag_data) const;
+	virtual bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const;
+	virtual void drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
+
+public:
+	void setup(Variant::Type p_array_type, const String &p_hint_string = "");
+	virtual void update_property() override;
+	EditorPropertyStruct();
 };
 
 class EditorPropertyDictionary : public EditorProperty {

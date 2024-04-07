@@ -3884,9 +3884,15 @@ EditorProperty *EditorInspectorDefaultPlugin::get_editor_for_property(Object *p_
 			}
 		} break;
 		case Variant::ARRAY: {
-			EditorPropertyArray *editor = memnew(EditorPropertyArray);
-			editor->setup(Variant::ARRAY, p_hint_text);
-			return editor;
+			if (p_hint == PROPERTY_HINT_STRUCT) {
+				EditorPropertyStruct *editor = memnew(EditorPropertyStruct);
+				editor->setup(Variant::ARRAY, p_hint_text);
+				return editor;
+			} else {
+				EditorPropertyArray *editor = memnew(EditorPropertyArray);
+				editor->setup(Variant::ARRAY, p_hint_text);
+				return editor;
+			}
 		} break;
 		case Variant::PACKED_BYTE_ARRAY: {
 			EditorPropertyArray *editor = memnew(EditorPropertyArray);

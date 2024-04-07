@@ -42,6 +42,8 @@
 #include "scene/gui/button.h"
 #include "scene/resources/packed_scene.h"
 
+///////////////////// ARRAY ///////////////////////////
+
 bool EditorPropertyArrayObject::_set(const StringName &p_name, const Variant &p_value) {
 	String name = p_name;
 
@@ -95,112 +97,7 @@ Variant EditorPropertyArrayObject::get_array() {
 EditorPropertyArrayObject::EditorPropertyArrayObject() {
 }
 
-///////////////////
-
-bool EditorPropertyDictionaryObject::_set(const StringName &p_name, const Variant &p_value) {
-	String name = p_name;
-
-	if (name == "new_item_key") {
-		new_item_key = p_value;
-		return true;
-	}
-
-	if (name == "new_item_value") {
-		new_item_value = p_value;
-		return true;
-	}
-
-	if (name.begins_with("indices")) {
-		dict = dict.duplicate();
-		int index = name.get_slicec('/', 1).to_int();
-		Variant key = dict.get_key_at_index(index);
-		dict[key] = p_value;
-		return true;
-	}
-
-	return false;
-}
-
-bool EditorPropertyDictionaryObject::_get(const StringName &p_name, Variant &r_ret) const {
-	String name = p_name;
-
-	if (name == "new_item_key") {
-		r_ret = new_item_key;
-		return true;
-	}
-
-	if (name == "new_item_value") {
-		r_ret = new_item_value;
-		return true;
-	}
-
-	if (name.begins_with("indices")) {
-		int index = name.get_slicec('/', 1).to_int();
-		Variant key = dict.get_key_at_index(index);
-		r_ret = dict[key];
-		if (r_ret.get_type() == Variant::OBJECT && Object::cast_to<EncodedObjectAsID>(r_ret)) {
-			r_ret = Object::cast_to<EncodedObjectAsID>(r_ret)->get_object_id();
-		}
-
-		return true;
-	}
-
-	return false;
-}
-
-void EditorPropertyDictionaryObject::set_dict(const Dictionary &p_dict) {
-	dict = p_dict;
-}
-
-Dictionary EditorPropertyDictionaryObject::get_dict() {
-	return dict;
-}
-
-void EditorPropertyDictionaryObject::set_new_item_key(const Variant &p_new_item) {
-	new_item_key = p_new_item;
-}
-
-Variant EditorPropertyDictionaryObject::get_new_item_key() {
-	return new_item_key;
-}
-
-void EditorPropertyDictionaryObject::set_new_item_value(const Variant &p_new_item) {
-	new_item_value = p_new_item;
-}
-
-Variant EditorPropertyDictionaryObject::get_new_item_value() {
-	return new_item_value;
-}
-
-String EditorPropertyDictionaryObject::get_property_name_for_index(int p_index) {
-	switch (p_index) {
-		case NEW_KEY_INDEX:
-			return "new_item_key";
-		case NEW_VALUE_INDEX:
-			return "new_item_value";
-		default:
-			return "indices/" + itos(p_index);
-	}
-}
-
-String EditorPropertyDictionaryObject::get_label_for_index(int p_index) {
-	switch (p_index) {
-		case NEW_KEY_INDEX:
-			return TTR("New Key:");
-			break;
-		case NEW_VALUE_INDEX:
-			return TTR("New Value:");
-			break;
-		default:
-			return dict.get_key_at_index(p_index).get_construct_string();
-			break;
-	}
-}
-
-EditorPropertyDictionaryObject::EditorPropertyDictionaryObject() {
-}
-
-///////////////////// ARRAY ///////////////////////////
+///////////////////// ARRAY EDITOR ///////////////////////////
 
 void EditorPropertyArray::initialize_array(Variant &p_array) {
 	if (array_type == Variant::ARRAY && subtype != Variant::NIL) {
@@ -841,8 +738,367 @@ EditorPropertyArray::EditorPropertyArray() {
 	subtype_hint_string = "";
 }
 
-///////////////////// DICTIONARY ///////////////////////////
+///////////////////// STRUCT ///////////////////////////
 
+bool EditorPropertyStructObject::_set(const StringName &p_name, const Variant &p_value) {
+	String name = p_name;
+
+	if (!name.begins_with("indices")) {
+		return false;
+	}
+
+	int index = name.get_slice("/", 1).to_int();
+	array.set(index, p_value);
+	return true;
+}
+
+bool EditorPropertyStructObject::_get(const StringName &p_name, Variant &r_ret) const {
+	String name = p_name;
+
+	if (!name.begins_with("indices")) {
+		return false;
+	}
+
+	int index = name.get_slice("/", 1).to_int();
+	r_ret = array.get(index);
+
+	if (r_ret.get_type() == Variant::OBJECT && Object::cast_to<EncodedObjectAsID>(r_ret)) {
+		r_ret = Object::cast_to<EncodedObjectAsID>(r_ret)->get_object_id();
+	}
+
+	return true;
+}
+
+void EditorPropertyStructObject::set_array(const Array &p_array) {
+	array = p_array;
+}
+
+Array EditorPropertyStructObject::get_array() {
+	return array;
+}
+
+EditorPropertyStructObject::EditorPropertyStructObject() {
+}
+
+///////////////////// STRUCT EDITOR ///////////////////////////
+
+void EditorPropertyStruct::initialize_array(Variant &p_array) {
+	ERR_FAIL_MSG("This hasn't been implemented yet don't know how to initialise a struct");
+}
+
+void EditorPropertyStruct::_property_changed(const String &p_property, Variant p_value, const String &p_name, bool p_changing) {
+	if (!p_property.begins_with("indices")) {
+		return;
+	}
+
+	if (p_value.get_type() == Variant::OBJECT && p_value.is_null()) {
+		p_value = Variant(); // `EditorResourcePicker` resets to `Ref<Resource>()`. See GH-82716.
+	}
+
+	int index = p_property.get_slice("/", 1).to_int();
+
+	Variant array = object->get_array().duplicate();
+	array.set(index, p_value);
+	emit_changed(get_edited_property(), array, p_name, p_changing);
+}
+
+void EditorPropertyStruct::_object_id_selected(const StringName &p_property, ObjectID p_id) {
+	emit_signal(SNAME("object_id_selected"), p_property, p_id);
+}
+
+void EditorPropertyStruct::_create_new_property_slot() {
+	int idx = slots.size();
+	HBoxContainer *hbox = memnew(HBoxContainer);
+
+	EditorProperty *prop = memnew(EditorPropertyNil);
+	hbox->add_child(prop);
+
+	property_vbox->add_child(hbox);
+
+	Slot slot;
+	slot.prop = prop;
+	slot.object = object;
+	slot.container = hbox;
+	slot.set_index(idx);
+	slots.push_back(slot);
+}
+
+void EditorPropertyStruct::update_property() {
+	Array array = get_edited_property_value();
+
+	String array_type_name = type_hint_string;
+
+	if (!array.is_struct()) {
+		edit->set_text(vformat(TTR("%s(Nil)"), array_type_name));
+		edit->set_pressed(false);
+		if (container) {
+			set_bottom_editor(nullptr);
+			memdelete(container);
+			container = nullptr;
+			slots.clear();
+		}
+		return;
+	}
+
+	object->set_array(array);
+
+	int size = array.size();
+
+	edit->set_text(array.get_typed_class_name());
+
+	bool unfolded = get_edited_object()->editor_is_section_unfolded(get_edited_property());
+	if (edit->is_pressed() != unfolded) {
+		edit->set_pressed(unfolded);
+	}
+
+	if (unfolded) {
+		updating = true;
+
+		if (!container) {
+			container = memnew(MarginContainer);
+			container->set_theme_type_variation("MarginContainer4px");
+			container->set_mouse_filter(MOUSE_FILTER_STOP);
+			add_child(container);
+			set_bottom_editor(container);
+
+			property_vbox = memnew(VBoxContainer);
+			property_vbox->set_h_size_flags(SIZE_EXPAND_FILL);
+			container->add_child(property_vbox);
+
+			for (int i = 0; i < size; i++) {
+				_create_new_property_slot();
+			}
+		}
+
+		property_vbox->set_visible(size > 0);
+
+		for (Slot &slot : slots) {
+			bool slot_visible = slot.index < size;
+			slot.container->set_visible(slot_visible);
+			// If not visible no need to update it
+			if (!slot_visible) {
+				continue;
+			}
+
+			int idx = slot.index;
+			Variant::Type value_type = array.get(idx).get_type();
+
+			// Check if the editor property needs to be updated.
+			bool value_as_id = Object::cast_to<EncodedObjectAsID>(array.get(idx));
+			if (value_type != slot.type || (value_type == Variant::OBJECT && (value_as_id != slot.as_id))) {
+				slot.as_id = value_as_id;
+				slot.type = value_type;
+				EditorProperty *new_prop = nullptr;
+				if (value_type == Variant::OBJECT && value_as_id) {
+					EditorPropertyObjectID *editor = memnew(EditorPropertyObjectID);
+					editor->setup("Object");
+					new_prop = editor;
+				} else {
+					new_prop = EditorInspector::instantiate_property_editor(nullptr, value_type, "", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE);
+				}
+				new_prop->set_selectable(false);
+				new_prop->set_use_folding(is_using_folding());
+				new_prop->connect(SNAME("property_changed"), callable_mp(this, &EditorPropertyStruct::_property_changed));
+				new_prop->connect(SNAME("object_id_selected"), callable_mp(this, &EditorPropertyStruct::_object_id_selected));
+				new_prop->set_h_size_flags(SIZE_EXPAND_FILL);
+				new_prop->set_read_only(is_read_only());
+				slot.prop->add_sibling(new_prop, false);
+				slot.prop->queue_free();
+				slot.prop = new_prop;
+				slot.set_index(idx);
+			}
+			slot.prop->update_property();
+		}
+
+		updating = false;
+
+	} else {
+		if (container) {
+			set_bottom_editor(nullptr);
+			memdelete(container);
+			container = nullptr;
+			slots.clear();
+		}
+	}
+}
+
+void EditorPropertyStruct::_button_draw() {
+	if (dropping) {
+		Color color = get_theme_color(SNAME("accent_color"), EditorStringName(Editor));
+		edit->draw_rect(Rect2(Point2(), edit->get_size()), color, false);
+	}
+}
+
+bool EditorPropertyStruct::_is_drop_valid(const Dictionary &p_drag_data) const {
+	return false;
+}
+
+bool EditorPropertyStruct::can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const {
+	return _is_drop_valid(p_data);
+}
+
+void EditorPropertyStruct::drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) {
+	ERR_FAIL_COND(!_is_drop_valid(p_data));
+}
+
+void EditorPropertyStruct::_notification(int p_what) {
+	switch (p_what) {
+		case NOTIFICATION_DRAG_BEGIN: {
+			if (is_visible_in_tree()) {
+				if (_is_drop_valid(get_viewport()->gui_get_drag_data())) {
+					dropping = true;
+					edit->queue_redraw();
+				}
+			}
+		} break;
+
+		case NOTIFICATION_DRAG_END: {
+			if (dropping) {
+				dropping = false;
+				edit->queue_redraw();
+			}
+		} break;
+	}
+}
+
+void EditorPropertyStruct::_edit_pressed() {
+	Variant array = get_edited_property_value();
+	if (!array.is_array() && edit->is_pressed()) {
+		initialize_array(array);
+		emit_changed(get_edited_property(), array);
+	}
+
+	get_edited_object()->editor_set_section_unfold(get_edited_property(), edit->is_pressed());
+	update_property();
+}
+
+void EditorPropertyStruct::setup(Variant::Type p_array_type, const String &p_hint_string) {
+	type_hint_string = p_hint_string;
+}
+
+void EditorPropertyStruct::_bind_methods() {
+}
+
+EditorPropertyStruct::EditorPropertyStruct() {
+	object.instantiate();
+
+	edit = memnew(Button);
+	edit->set_h_size_flags(SIZE_EXPAND_FILL);
+	edit->set_clip_text(true);
+	edit->connect("pressed", callable_mp(this, &EditorPropertyStruct::_edit_pressed));
+	edit->set_toggle_mode(true);
+	SET_DRAG_FORWARDING_CD(edit, EditorPropertyStruct);
+	edit->connect("draw", callable_mp(this, &EditorPropertyStruct::_button_draw));
+	add_child(edit);
+	add_focusable(edit);
+}
+
+///////////////////// DICTIONARY ///////////////////////////
+///////////////////
+
+bool EditorPropertyDictionaryObject::_set(const StringName &p_name, const Variant &p_value) {
+	String name = p_name;
+
+	if (name == "new_item_key") {
+		new_item_key = p_value;
+		return true;
+	}
+
+	if (name == "new_item_value") {
+		new_item_value = p_value;
+		return true;
+	}
+
+	if (name.begins_with("indices")) {
+		dict = dict.duplicate();
+		int index = name.get_slicec('/', 1).to_int();
+		Variant key = dict.get_key_at_index(index);
+		dict[key] = p_value;
+		return true;
+	}
+
+	return false;
+}
+
+bool EditorPropertyDictionaryObject::_get(const StringName &p_name, Variant &r_ret) const {
+	String name = p_name;
+
+	if (name == "new_item_key") {
+		r_ret = new_item_key;
+		return true;
+	}
+
+	if (name == "new_item_value") {
+		r_ret = new_item_value;
+		return true;
+	}
+
+	if (name.begins_with("indices")) {
+		int index = name.get_slicec('/', 1).to_int();
+		Variant key = dict.get_key_at_index(index);
+		r_ret = dict[key];
+		if (r_ret.get_type() == Variant::OBJECT && Object::cast_to<EncodedObjectAsID>(r_ret)) {
+			r_ret = Object::cast_to<EncodedObjectAsID>(r_ret)->get_object_id();
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+void EditorPropertyDictionaryObject::set_dict(const Dictionary &p_dict) {
+	dict = p_dict;
+}
+
+Dictionary EditorPropertyDictionaryObject::get_dict() {
+	return dict;
+}
+
+void EditorPropertyDictionaryObject::set_new_item_key(const Variant &p_new_item) {
+	new_item_key = p_new_item;
+}
+
+Variant EditorPropertyDictionaryObject::get_new_item_key() {
+	return new_item_key;
+}
+
+void EditorPropertyDictionaryObject::set_new_item_value(const Variant &p_new_item) {
+	new_item_value = p_new_item;
+}
+
+Variant EditorPropertyDictionaryObject::get_new_item_value() {
+	return new_item_value;
+}
+
+String EditorPropertyDictionaryObject::get_property_name_for_index(int p_index) {
+	switch (p_index) {
+		case NEW_KEY_INDEX:
+			return "new_item_key";
+		case NEW_VALUE_INDEX:
+			return "new_item_value";
+		default:
+			return "indices/" + itos(p_index);
+	}
+}
+
+String EditorPropertyDictionaryObject::get_label_for_index(int p_index) {
+	switch (p_index) {
+		case NEW_KEY_INDEX:
+			return TTR("New Key:");
+			break;
+		case NEW_VALUE_INDEX:
+			return TTR("New Value:");
+			break;
+		default:
+			return dict.get_key_at_index(p_index).get_construct_string();
+			break;
+	}
+}
+
+EditorPropertyDictionaryObject::EditorPropertyDictionaryObject() {
+}
+///////////////////// DICTIONARY EDITOR ///////////////////////////
 void EditorPropertyDictionary::_property_changed(const String &p_property, Variant p_value, const String &p_name, bool p_changing) {
 	if (p_value.get_type() == Variant::OBJECT && p_value.is_null()) {
 		p_value = Variant(); // `EditorResourcePicker` resets to `Ref<Resource>()`. See GH-82716.
