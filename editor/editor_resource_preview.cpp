@@ -98,7 +98,7 @@ EditorResourcePreviewGenerator::EditorResourcePreviewGenerator() {
 void EditorResourcePreviewGenerator::DrawRequester::request_and_wait(RID p_viewport) const {
 	if (EditorResourcePreview::get_singleton()->is_threaded()) {
 		Callable request_vp_update_once = callable_mp(RS::get_singleton(), &RS::viewport_set_update_mode).bind(p_viewport, RS::VIEWPORT_UPDATE_ONCE);
-		RS::get_singleton()->connect(SNAME("frame_pre_draw"), request_vp_update_once, Object::CONNECT_ONE_SHOT);
+		RS::get_singleton()->connect(SNAME("frame_pre_draw"), request_vp_update_once, CONNECT_ONE_SHOT);
 		RS::get_singleton()->request_frame_drawn_callback(callable_mp(const_cast<EditorResourcePreviewGenerator::DrawRequester *>(this), &EditorResourcePreviewGenerator::DrawRequester::_post_semaphore));
 
 		semaphore.wait();
