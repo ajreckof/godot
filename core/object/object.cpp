@@ -35,6 +35,7 @@
 #include "core/extension/gdextension_manager.h"
 #include "core/io/resource.h"
 #include "core/object/class_db.h"
+#include "core/object/connection.h"
 #include "core/object/message_queue.h"
 #include "core/object/script_language.h"
 #include "core/os/os.h"
@@ -43,7 +44,6 @@
 #include "core/templates/local_vector.h"
 #include "core/variant/struct.h"
 #include "core/variant/typed_array.h"
-#include "core/object/connection.h"
 
 #ifdef DEBUG_ENABLED
 
@@ -66,8 +66,6 @@ struct _ObjectDebugLock {
 #define OBJ_DEBUG_LOCK
 
 #endif
-
-
 
 MethodInfo::operator Dictionary() const {
 	Dictionary d;

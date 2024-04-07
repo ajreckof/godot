@@ -90,7 +90,7 @@ void ClassDB::_bind_compatibility_methods() {
 	::ClassDB::bind_compatibility_method(D_METHOD("class_get_property_list", "class", "no_inheritance"), &ClassDB::class_get_property_list_compat_82198, DEFVAL(false));
 	::ClassDB::bind_compatibility_method(D_METHOD("class_get_method_list", "class", "no_inheritance"), &ClassDB::class_get_method_list_compat_82198, DEFVAL(false));
 }
-}
-}
+} //namespace special
+} //namespace core_bind
 
 #endif
