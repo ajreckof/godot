@@ -71,4 +71,4 @@ struct SignalData {
 	HashMap<Callable, Slot, HashableHasher<Callable>> slot_map;
 };
 
-#endif //CONNECTION_H
+#endif // CONNECTION_H

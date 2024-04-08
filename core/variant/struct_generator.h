@@ -156,6 +156,9 @@ class Struct;
 	static const StringName get_struct_name() {               \
 		return SNAME(m_struct_name);                          \
 	}                                                         \
+	static const StructInfo &get_struct_info() {              \
+		return Layout::get_struct_info();                     \
+	}                                                         \
 	using Layout = StructLayout<m_struct, __VA_ARGS__>;       \
 	m_struct(const Dictionary &p_dict) {                      \
 		Layout::fill_struct(p_dict, *this);                   \
@@ -188,6 +191,8 @@ struct StructInfo {
 		struct_member_infos = p_struct_member_infos;
 		default_values = p_default_values;
 	};
+
+	Dictionary to_dict() const;
 
 	_FORCE_INLINE_ const bool operator==(const StructInfo &p_struct_info) const {
 		return name == p_struct_info.name;
@@ -280,4 +285,4 @@ private:
 	};
 };
 
-#endif //STRUCT_GENERATOR_H
+#endif // STRUCT_GENERATOR_H
