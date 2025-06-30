@@ -45,6 +45,7 @@ void Resource::emit_changed() {
 		ResourceLoader::resource_changed_emit(this);
 		return;
 	}
+	set_edited(is_edited());
 
 	emit_signal(CoreStringName(changed));
 }
