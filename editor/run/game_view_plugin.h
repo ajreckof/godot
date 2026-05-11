@@ -152,13 +152,6 @@ class GameView : public VBoxContainer {
 		EMBED_NOT_AVAILABLE_HEADLESS,
 	};
 
-	enum EmbedMode {
-		EMBED_TYPE_DISABLED,
-		EMBED_TYPE_FLOATING,
-		EMBED_TYPE_EDITOR,
-		EMBED_TYPE_MAX,
-	};
-
 	inline static GameView *singleton = nullptr;
 
 	Ref<GameViewDebugger> debugger;
@@ -201,7 +194,6 @@ class GameView : public VBoxContainer {
 	MenuButton *game_window_options_menu = nullptr;
 	Label *game_size_label = nullptr;
 	HBoxContainer *game_hb = nullptr;
-	Button *game_embed_mode_button[EmbedMode::EMBED_TYPE_MAX];
 	Panel *panel = nullptr;
 	EmbeddedProcessBase *embedded_process = nullptr;
 	Label *state_label = nullptr;
@@ -256,7 +248,6 @@ class GameView : public VBoxContainer {
 	EmbedAvailability _get_embed_available();
 	void _update_ui();
 	void _update_embed_menu_options();
-	void _update_embed_buttons();
 	void _update_game_window_size_label();
 	void _update_embed_window_size();
 	void _update_arguments_for_instance(int p_idx, List<String> &r_arguments);
@@ -284,6 +275,8 @@ protected:
 	void _notification(int p_what);
 
 public:
+	void set_embed_options(bool p_embed_on_play, bool p_make_floating_on_play);
+	inline static GameView *get_singleton() { return singleton; }
 	void set_state(const Dictionary &p_state);
 	Dictionary get_state() const;
 

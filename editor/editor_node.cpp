@@ -2740,7 +2740,7 @@ void EditorNode::_dialog_action(String p_file) {
 			ProjectSettings::get_singleton()->save();
 			// TODO: Would be nice to show the project manager opened with the highlighted field.
 
-			project_run_bar->play_main_scene((bool)pick_main_scene->get_meta("from_native", false));
+			project_run_bar->resume_running_preset();
 		} break;
 		case SCENE_CLOSE:
 		case SCENE_TAB_CLOSE:
@@ -2807,7 +2807,7 @@ void EditorNode::_dialog_action(String p_file) {
 			if (file->get_file_mode() == EditorFileDialog::FILE_MODE_SAVE_FILE) {
 				save_default_environment();
 				_save_scene_with_preview(p_file);
-				project_run_bar->play_main_scene((bool)pick_main_scene->get_meta("from_native", false));
+				project_run_bar->resume_running_preset();
 			}
 		} break;
 

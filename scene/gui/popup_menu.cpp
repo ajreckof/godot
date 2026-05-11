@@ -3796,7 +3796,6 @@ void PopupMenu::set_visible(bool p_visible) {
 		}
 	} else {
 		if (p_visible && is_inside_tree()) {
-			set_flag(FLAG_POPUP, true);
 			set_flag(FLAG_NO_FOCUS, !is_embedded());
 		}
 
