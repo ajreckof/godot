@@ -37,10 +37,12 @@
 class AcceptDialog;
 class Button;
 class EditorExportPreset;
-class EditorRunNative;
 class HBoxContainer;
 class MenuButton;
 class PanelContainer;
+class ConfirmationDialog;
+class RichTextLabel;
+class PopupMenu;
 
 class EditorRunBar : public MarginContainer {
 	GDCLASS(EditorRunBar, MarginContainer);
@@ -60,8 +62,75 @@ class EditorRunBar : public MarginContainer {
 		ON = 1,
 	};
 
+	enum PlayPopupMenuItem {
+		PLAY_POPUP_RUN_SCENE_SEPARATOR,
+		PLAY_POPUP_RUN_MAIN,
+		PLAY_POPUP_RUN_CURRENT,
+		PLAY_POPUP_RUN_SELECT_SCENE,
+		PLAY_POPUP_RUN_DESTINATION_SEPARATOR,
+		PLAY_POPUP_RUN_DESTINATION_EMBEDDED_IN_EDITOR,
+		PLAY_POPUP_RUN_DESTINATION_FLOATING_WINDOW,
+		PLAY_POPUP_RUN_OPTIONS_SEPARATOR,
+		PLAY_POPUP_RUN_OPTIONS_SHOW_TOOLBAR,
+		PLAY_POPUP_RUN_OPTIONS_RUN_XR_ENABLED,
+		PLAY_POPUP_RUN_OPTIONS_MOVIE_MAKER_ENABLED,
+		PLAY_POPUP_RUN_OPTIONS_MOVIE_MAKER_OPTIONS,
+		PLAY_POPUP_RUN_DESTINATION_REMOTE = 1 << 4,
+		PLAY_POPUP_SELECTED_SCENE = 1 << 5,
+	};
+	const int PLAY_POPUP_EXTRA_INFO = 6; // Number of bits used for encoding extra info in the popup item IDs.
+
+	enum RunDestination {
+		DESTINATION_EMBEDDED_IN_EDITOR,
+		DESTINATION_FLOATING_WINDOW,
+		DESTINATION_REMOTE,
+	};
+	struct RunPreset {
+		String name;
+		RunMode mode = RunMode::RUN_MAIN;
+		String custom_scene_path;
+		RunDestination destination = RunDestination::DESTINATION_EMBEDDED_IN_EDITOR;
+		int remote_platform_id = -1;
+		int remote_device_id = -1;
+		bool show_toolbar = true;
+		bool run_xr_enabled = false;
+
+		Dictionary to_dict() const {
+			Dictionary dict;
+			dict["name"] = name;
+			dict["mode"] = mode;
+			dict["custom_scene_path"] = custom_scene_path;
+			dict["destination"] = destination;
+			dict["remote_platform_id"] = remote_platform_id;
+			dict["remote_device_id"] = remote_device_id;
+			dict["show_toolbar"] = show_toolbar;
+			dict["run_xr_enabled"] = run_xr_enabled;
+			return dict;
+		}
+
+		static RunPreset from_dict(const Dictionary &dict) {
+			if (dict.is_empty()) {
+				return RunPreset();
+				// If the dictionary is empty, we return a default preset. This can happen if the metadata was not set yet, or if it was cleared because of an error during loading (e.g. due to incompatible data).
+			}
+			RunPreset preset;
+			preset.name = dict.get("name", "");
+			preset.mode = static_cast<RunMode>(int(dict.get("mode", 0)));
+			preset.custom_scene_path = dict.get("custom_scene_path", "");
+			preset.destination = static_cast<RunDestination>(int(dict.get("destination", 0)));
+			preset.remote_platform_id = int(dict.get("remote_platform_id", -1));
+			preset.remote_device_id = int(dict.get("remote_device_id", -1));
+			preset.show_toolbar = dict.get("show_toolbar", true);
+			preset.run_xr_enabled = dict.get("run_xr_enabled", false);
+			return preset;
+		}
+	};
+
 	PanelContainer *main_panel = nullptr;
 	HBoxContainer *main_hbox = nullptr;
+	HBoxContainer *main_play_hbox = nullptr;
+	MenuButton *main_play_menu_button = nullptr;
+	PopupMenu *main_play_popup = nullptr;
 	HBoxContainer *outer_hbox = nullptr;
 
 	Button *profiler_autostart_indicator = nullptr;
@@ -78,19 +147,19 @@ class EditorRunBar : public MarginContainer {
 	Button *play_custom_scene_button = nullptr;
 
 	EditorRun editor_run;
-	EditorRunNative *run_native = nullptr;
+	ConfirmationDialog *run_native_confirm = nullptr;
+	RichTextLabel *native_result_dialog_log = nullptr;
+	AcceptDialog *native_result_dialog = nullptr;
+	bool run_native_confirmed = false;
 
-	enum MovieMakerMenuItem {
-		MOVIE_MAKER_TOGGLE,
-		MOVIE_MAKER_OPEN_SETTINGS,
-	};
-	PanelContainer *write_movie_panel = nullptr;
-	MenuButton *write_movie_button = nullptr;
 	bool movie_maker_enabled = false;
 
-	RunMode current_mode = RunMode::STOPPED;
 	String run_custom_filename;
 	String run_current_filename;
+	PackedStringArray last_runned_scenes;
+	RunPreset current_preset;
+	RunPreset *running_preset;
+	int MAX_CACHED_RUN_SCENES = 3;
 
 	void _reset_play_buttons();
 	void _update_play_buttons();
@@ -104,8 +173,15 @@ class EditorRunBar : public MarginContainer {
 
 	void _run_scene(const String &p_scene_path = "", const Vector<String> &p_run_args = Vector<String>());
 	void _run_native(const Ref<EditorExportPreset> &p_preset);
+	void _confirm_run_native();
 
 	void _profiler_autostart_indicator_pressed();
+	void _generate_popup_menu();
+	void _on_popup_menu_id_pressed(int p_id);
+	void _save_current_preset();
+
+	void _selected_scene(const String p_scene_path);
+	void _selected_running_scene(const String p_scene_path);
 
 private:
 	static Vector<String> _get_xr_mode_play_args(RunXRModeMenuItem p_menu_item);
@@ -120,15 +196,16 @@ public:
 	void recovery_mode_show_dialog();
 	void recovery_mode_reload_project();
 
-	void play_main_scene(bool p_from_native = false, const Vector<String> &p_play_args = Vector<String>());
-	void play_current_scene(bool p_reload = false, const Vector<String> &p_play_args = Vector<String>());
-	void play_custom_scene(const String &p_custom, const Vector<String> &p_play_args = Vector<String>());
+	void play_current_preset();
+	void play_main_scene(const Vector<String> &p_play_args = Vector<String>());
+	void play_current_scene(const Vector<String> &p_play_args = Vector<String>());
+	void play_custom_scene(const String &p_scene_path, const Vector<String> &p_play_args = Vector<String>());
+
+	void play_preset(RunPreset &p_preset);
 
 	void stop_playing();
 	bool is_playing() const;
 	String get_playing_scene() const;
-
-	Error start_native_device(int p_device_id) const;
 
 	ProcessID has_child_process(ProcessID p_pid) const;
 	void stop_child_process(ProcessID p_pid);
@@ -144,4 +221,6 @@ public:
 	HBoxContainer *get_buttons_container();
 
 	EditorRunBar();
+	Error start_run_native(int platform, int device);
+	void resume_running_preset();
 };
