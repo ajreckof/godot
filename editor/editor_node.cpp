@@ -5568,7 +5568,7 @@ void EditorNode::_project_run_stopped() {
 }
 
 void EditorNode::notify_all_debug_sessions_exited() {
-	project_run_bar->stop_playing();
+	EditorRunBar::get_singleton()->notify_all_debug_sessions_exited();
 }
 
 void EditorNode::add_io_error(const String &p_error) {

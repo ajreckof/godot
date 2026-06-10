@@ -43,7 +43,11 @@
 #include "editor/gui/editor_bottom_panel.h"
 #include "editor/gui/editor_quick_open_dialog.h"
 #include "editor/gui/editor_toaster.h"
+#include "editor/run/editor_run.h"
 #include "editor/run/game_view_plugin.h"
+#include "editor/run/run_preset.h"
+#include "editor/run/run_preset_button.h"
+#include "editor/run/run_preset_manager.h"
 #include "editor/settings/editor_command_palette.h"
 #include "editor/settings/editor_settings.h"
 #include "editor/settings/project_settings_editor.h"
@@ -73,28 +77,34 @@ void EditorRunBar::_notification(int p_what) {
 				recovery_mode_show_dialog();
 			}
 
+			Dictionary current_preset_data = EditorSettings::get_singleton()->get_project_metadata("editor_run_bar", "current_preset", Dictionary());
+			current_preset = RunPreset::from_dict(current_preset_data);
 			if (DisplayServer::get_singleton()->has_feature(DisplayServerEnums::FEATURE_WINDOW_EMBEDDING)) {
-				Dictionary current_preset_data = EditorSettings::get_singleton()->get_project_metadata("editor_run_bar", "current_preset", Dictionary());
-				current_preset = RunPreset::from_dict(current_preset_data);
 				int game_mode = EDITOR_GET("run/window_placement/game_embed_mode");
 				switch (game_mode) {
 					case -1: { // Disabled.
-						current_preset.destination = DESTINATION_FLOATING_WINDOW;
-						current_preset.show_toolbar = false;
+						current_preset->set_destination(DESTINATION_FLOATING_WINDOW);
+						current_preset->set_show_toolbar(false);
 					} break;
 					case 1: { // Embed.
-						current_preset.destination = DESTINATION_EMBEDDED_IN_EDITOR;
-						current_preset.show_toolbar = true;
+						current_preset->set_destination(DESTINATION_EMBEDDED_IN_EDITOR);
+						current_preset->set_show_toolbar(true);
 					} break;
 					case 2: { // Floating.
-						current_preset.destination = DESTINATION_FLOATING_WINDOW;
-						current_preset.show_toolbar = true;
+						current_preset->set_destination(DESTINATION_FLOATING_WINDOW);
+						current_preset->set_show_toolbar(true);
 					} break;
 					default: {
 						// nothing to do here, we keep the value that was saved last time.
 					} break;
 				}
+			} else {
+				current_preset->set_destination(DESTINATION_FLOATING_WINDOW);
+				current_preset->set_show_toolbar(false);
 			}
+
+			_generate_popup_menu();
+			_generate_presets_buttons();
 			set_process(true);
 		} break;
 
@@ -126,6 +136,8 @@ void EditorRunBar::_notification(int p_what) {
 			pause_button->set_button_icon(get_editor_theme_icon(SNAME("Pause")));
 			stop_button->set_button_icon(get_editor_theme_icon(SNAME("Stop")));
 
+			presets_menu_button->set_button_icon(get_editor_theme_icon(SNAME("GuiTabMenuHl")));
+
 		} break;
 
 		case NOTIFICATION_PROCESS: {
@@ -133,6 +145,10 @@ void EditorRunBar::_notification(int p_what) {
 
 			if (changed) {
 				_generate_popup_menu();
+				for (Ref<RunPreset> preset : run_preset_manager_dialog->get_presets()) {
+					preset->update_options();
+				}
+				_update_presets_menu_button();
 			}
 		} break;
 	}
@@ -154,7 +170,7 @@ void EditorRunBar::_update_play_buttons() {
 	}
 
 	_reset_play_buttons();
-	if (!is_playing()) {
+	if (!is_playing() || current_preset != running_preset) {
 		return;
 	}
 
@@ -162,18 +178,21 @@ void EditorRunBar::_update_play_buttons() {
 	play_button->set_button_icon(get_editor_theme_icon(SNAME("Reload")));
 }
 
-Vector<String> EditorRunBar::_get_xr_mode_play_args(RunXRModeMenuItem p_menu_item) {
-	Vector<String> play_args;
-	if (p_menu_item == RunXRModeMenuItem::OFF) {
-		// Play in regular mode, xr mode off.
-		play_args.push_back("--xr-mode");
-		play_args.push_back("off");
-	} else if (p_menu_item == RunXRModeMenuItem::ON) {
-		// Play in xr mode.
-		play_args.push_back("--xr-mode");
-		play_args.push_back("on");
+void EditorRunBar::_on_presets_menu_item_pressed(int p_id) {
+	Vector<Ref<RunPreset>> presets = run_preset_manager_dialog->get_presets();
+	if (p_id >= 0 && p_id < presets.size()) {
+		play_preset(presets[p_id]);
+		return;
+	} else if (p_id == presets.size()) {
+		// "Manage Presets..." is always the last item in the menu.
+		run_preset_manager_dialog->popup_centered_ratio(0.6);
+		return;
 	}
-	return play_args;
+}
+
+void EditorRunBar::_on_presets_submenu_item_pressed(int p_option_id, int p_preset_id) {
+	run_preset_manager_dialog->get_presets()[p_preset_id]->set_option(p_option_id);
+	_on_presets_menu_item_pressed(p_preset_id);
 }
 
 void EditorRunBar::_run_scene(const String &p_scene_path, const Vector<String> &p_run_args) {
@@ -203,7 +222,7 @@ void EditorRunBar::_run_scene(const String &p_scene_path, const Vector<String> &
 
 	String write_movie_file;
 	if (is_movie_maker_enabled()) {
-		if (running_preset->mode == RUN_CURRENT) {
+		if (running_preset->get_mode() == RUN_CURRENT) {
 			Node *scene_root = nullptr;
 			if (p_scene_path.is_empty()) {
 				scene_root = get_tree()->get_edited_scene_root();
@@ -280,7 +299,7 @@ void EditorRunBar::_profiler_autostart_indicator_pressed() {
 }
 
 void EditorRunBar::_generate_popup_menu() {
-	switch (current_preset.mode) {
+	switch (current_preset->get_mode()) {
 		case RunMode::RUN_MAIN:
 			main_play_menu_button->set_text(TTR("Main Scene"));
 			break;
@@ -288,7 +307,7 @@ void EditorRunBar::_generate_popup_menu() {
 			main_play_menu_button->set_text(TTR("Current Scene"));
 			break;
 		case RunMode::RUN_CUSTOM:
-			main_play_menu_button->set_text(TTR("Custom Scene : ") + current_preset.custom_scene_path.get_file());
+			main_play_menu_button->set_text(TTR("Custom Scene : ") + current_preset->get_custom_scene_path().get_file());
 			/* code */
 			break;
 		default:
@@ -300,28 +319,28 @@ void EditorRunBar::_generate_popup_menu() {
 	main_play_popup->add_separator(TTR("Run Scene"), PLAY_POPUP_RUN_SCENE_SEPARATOR);
 
 	main_play_popup->add_radio_check_item(TTR("Main Scene"), PLAY_POPUP_RUN_MAIN);
-	main_play_popup->set_item_checked(-1, current_preset.mode == RunMode::RUN_MAIN);
+	main_play_popup->set_item_checked(-1, current_preset->get_mode() == RunMode::RUN_MAIN);
 
 	main_play_popup->add_radio_check_item(TTR("Current Scene"), PLAY_POPUP_RUN_CURRENT);
-	main_play_popup->set_item_checked(-1, current_preset.mode == RunMode::RUN_CURRENT);
-	main_play_popup->set_item_disabled(-1, current_preset.destination == DESTINATION_REMOTE);
+	main_play_popup->set_item_checked(-1, current_preset->get_mode() == RunMode::RUN_CURRENT);
+	main_play_popup->set_item_disabled(-1, current_preset->get_destination() == DESTINATION_REMOTE);
 
 	for (int i = 0; i < last_runned_scenes.size(); i++) {
 		main_play_popup->add_radio_check_item(last_runned_scenes[i].get_file(), (i << PLAY_POPUP_EXTRA_INFO) + PLAY_POPUP_SELECTED_SCENE); // +1 to account for the "Select Scene..." item.
 		main_play_popup->set_item_tooltip(-1, last_runned_scenes[i]);
-		main_play_popup->set_item_checked(-1, current_preset.mode == RunMode::RUN_CUSTOM && current_preset.custom_scene_path == last_runned_scenes[i]);
-		main_play_popup->set_item_disabled(-1, current_preset.destination == DESTINATION_REMOTE);
+		main_play_popup->set_item_checked(-1, current_preset->get_mode() == RunMode::RUN_CUSTOM && current_preset->get_custom_scene_path() == last_runned_scenes[i]);
+		main_play_popup->set_item_disabled(-1, current_preset->get_destination() == DESTINATION_REMOTE);
 	}
 	main_play_popup->add_item(TTR("Select Scene..."), PLAY_POPUP_RUN_SELECT_SCENE);
-	main_play_popup->set_item_disabled(-1, current_preset.destination == DESTINATION_REMOTE);
+	main_play_popup->set_item_disabled(-1, current_preset->get_destination() == DESTINATION_REMOTE);
 
 	main_play_popup->add_separator(TTR("Run Destination"), PLAY_POPUP_RUN_DESTINATION_SEPARATOR);
 
 	main_play_popup->add_radio_check_item(TTR("Floating Window"), PLAY_POPUP_RUN_DESTINATION_FLOATING_WINDOW);
-	main_play_popup->set_item_checked(-1, current_preset.destination == RunDestination::DESTINATION_FLOATING_WINDOW);
+	main_play_popup->set_item_checked(-1, current_preset->get_destination() == RunDestination::DESTINATION_FLOATING_WINDOW);
 
 	main_play_popup->add_radio_check_item(TTR("Embedded in Editor"), PLAY_POPUP_RUN_DESTINATION_EMBEDDED_IN_EDITOR);
-	main_play_popup->set_item_checked(-1, current_preset.destination == RunDestination::DESTINATION_EMBEDDED_IN_EDITOR);
+	main_play_popup->set_item_checked(-1, current_preset->get_destination() == RunDestination::DESTINATION_EMBEDDED_IN_EDITOR);
 
 	int device_shortcut_id = 1;
 	LocalVector<int> platform_idx_with_options;
@@ -334,12 +353,10 @@ void EditorRunBar::_generate_popup_menu() {
 		const int device_count = MIN(eep->get_options_count(), 9000);
 		bool has_options = false;
 		if (device_count > 0) {
-			main_play_popup->add_icon_item(eep->get_run_icon(), eep->get_name(), (EditorExport::encode_platform_device_id(i, 0) << PLAY_POPUP_EXTRA_INFO) + PLAY_POPUP_RUN_DESTINATION_REMOTE);
-			main_play_popup->set_item_disabled(-1, true);
 			for (int j = 0; j < device_count; j++) {
 				if (eep->is_option_runnable(j)) {
-					main_play_popup->add_icon_radio_check_item(eep->get_option_icon(j), eep->get_option_label(j), (EditorExport::encode_platform_device_id(i, j) << PLAY_POPUP_EXTRA_INFO) + PLAY_POPUP_RUN_DESTINATION_REMOTE);
-					main_play_popup->set_item_checked(-1, current_preset.destination == DESTINATION_REMOTE && current_preset.remote_platform_id == i && current_preset.remote_device_id == j);
+					main_play_popup->add_icon_radio_check_item(eep->get_option_icon(j), eep->get_name() + " : " + eep->get_option_label(j), (EditorExport::encode_platform_device_id(i, j) << PLAY_POPUP_EXTRA_INFO) + PLAY_POPUP_RUN_DESTINATION_REMOTE);
+					main_play_popup->set_item_checked(-1, current_preset->get_destination() == DESTINATION_REMOTE && current_preset->get_remote_platform_id() == i && current_preset->get_remote_device_id() == j);
 
 					if (device_shortcut_id <= 4) {
 						// Assign shortcuts for the first 4 devices added in the list.
@@ -347,7 +364,6 @@ void EditorRunBar::_generate_popup_menu() {
 						device_shortcut_id += 1;
 					}
 					main_play_popup->set_item_tooltip(-1, eep->get_option_tooltip(j));
-					main_play_popup->set_item_indent(-1, 2);
 				} else {
 					has_options = true;
 				}
@@ -361,46 +377,79 @@ void EditorRunBar::_generate_popup_menu() {
 	main_play_popup->add_separator(TTRC("Run Options"), PLAY_POPUP_RUN_OPTIONS_SEPARATOR);
 
 	main_play_popup->add_check_item(TTRC("Show Toolbar"), PLAY_POPUP_RUN_OPTIONS_SHOW_TOOLBAR);
-	main_play_popup->set_item_disabled(-1, current_preset.destination != DESTINATION_FLOATING_WINDOW);
-	main_play_popup->set_item_checked(-1, current_preset.show_toolbar);
+	main_play_popup->set_item_disabled(-1, current_preset->get_destination() != DESTINATION_FLOATING_WINDOW);
+	main_play_popup->set_item_checked(-1, current_preset->get_show_toolbar());
 #ifndef XR_DISABLED
 	if (XRServer::get_xr_mode() == XRServer::XRMODE_ON ||
 			(XRServer::get_xr_mode() == XRServer::XRMODE_DEFAULT && GLOBAL_GET("xr/openxr/enabled"))) {
 		main_play_popup->add_check_item(TTRC("XR Mode Enabled"), PLAY_POPUP_RUN_OPTIONS_RUN_XR_ENABLED);
-		main_play_popup->set_item_checked(-1, current_preset.run_xr_enabled);
+		main_play_popup->set_item_checked(-1, current_preset->get_run_xr_enabled());
 	}
 #endif
 	main_play_popup->add_check_item(TTRC("Movie Maker Mode Enabled"), PLAY_POPUP_RUN_OPTIONS_MOVIE_MAKER_ENABLED);
 	main_play_popup->set_item_checked(-1, is_movie_maker_enabled());
-	main_play_popup->set_item_disabled(-1, current_preset.destination == DESTINATION_REMOTE);
+	main_play_popup->set_item_disabled(-1, current_preset->get_destination() == DESTINATION_REMOTE);
 	main_play_popup->add_item(TTRC("Movie Maker Options..."), PLAY_POPUP_RUN_OPTIONS_MOVIE_MAKER_OPTIONS);
 
 	for (int platform_idx : platform_idx_with_options) {
 		Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(platform_idx);
 		const int device_count = MIN(eep->get_options_count(), 9000);
-		main_play_popup->add_icon_item(eep->get_run_icon(), eep->get_name(), (EditorExport::encode_platform_device_id(platform_idx, 0) << PLAY_POPUP_EXTRA_INFO) + PLAY_POPUP_RUN_DESTINATION_REMOTE);
-		main_play_popup->set_item_disabled(-1, true);
 		for (int j = 0; j < device_count; j++) {
 			if (!eep->is_option_runnable(j)) {
-				main_play_popup->add_icon_item(eep->get_option_icon(j), eep->get_option_label(j), (EditorExport::encode_platform_device_id(platform_idx, j) << PLAY_POPUP_EXTRA_INFO) + PLAY_POPUP_RUN_DESTINATION_REMOTE);
+				main_play_popup->add_icon_item(eep->get_option_icon(j), eep->get_name() + " : " + eep->get_option_label(j), (EditorExport::encode_platform_device_id(platform_idx, j) << PLAY_POPUP_EXTRA_INFO) + PLAY_POPUP_RUN_DESTINATION_REMOTE);
 				main_play_popup->set_item_tooltip(-1, eep->get_option_tooltip(j));
-				main_play_popup->set_item_indent(-1, 2);
 			}
 		}
 		main_play_popup->set_item_disabled(main_play_popup->get_item_index((EditorExport::encode_platform_device_id(platform_idx, 0) << PLAY_POPUP_EXTRA_INFO) + PLAY_POPUP_RUN_DESTINATION_REMOTE), false);
 	}
 
 	// Save the current present in project metadata, anytime there is a modification of it there should be a regeneration anyway.
-	EditorSettings::get_singleton()->set_project_metadata("editor_run_bar", "current_preset", current_preset.to_dict());
+	EditorSettings::get_singleton()->set_project_metadata("editor_run_bar", "current_preset", current_preset->to_dict());
+}
+
+void EditorRunBar::_generate_presets_buttons() {
+	preset_hbox->remove_child(presets_menu_button);
+
+	for (int i = 0; i < preset_hbox->get_child_count(); i++) {
+		preset_hbox->get_child(i)->queue_free();
+	}
+
+	RunPresetButton *preset_button = nullptr;
+	for (Ref<RunPreset> preset : run_preset_manager_dialog->get_presets()) {
+		preset_button = memnew(RunPresetButton);
+		preset_button->set_preset(preset);
+		preset_hbox->add_child(preset_button);
+	}
+	_update_presets_menu_button();
+	preset_hbox->add_child(presets_menu_button);
+}
+
+void EditorRunBar::_update_presets_menu_button() {
+	presets_menu_button->get_popup()->clear(true);
+	for (Ref<RunPreset> preset : run_preset_manager_dialog->get_presets()) {
+		Vector<RunPresetOptions> options = preset->get_options();
+		if (options.is_empty()) {
+			presets_menu_button->get_popup()->add_icon_item(preset->get_icon(), preset->get_name());
+		} else {
+			PopupMenu *submenu = memnew(PopupMenu);
+			for (const RunPresetOptions &option : options) {
+				submenu->add_icon_item(option.icon, option.name, option.id);
+			}
+			submenu->connect(SceneStringName(id_pressed), callable_mp(this, &EditorRunBar::_on_presets_submenu_item_pressed).bind(presets_menu_button->get_popup()->get_item_count()));
+			presets_menu_button->get_popup()->add_submenu_node_item(preset->get_name(), submenu);
+			presets_menu_button->get_popup()->set_item_icon(-1, preset->get_icon());
+		}
+	}
+	presets_menu_button->get_popup()->add_item(TTR("Manage Presets..."));
 }
 
 void EditorRunBar::_on_popup_menu_id_pressed(int p_id) {
 	switch (p_id) {
 		case PLAY_POPUP_RUN_MAIN:
-			current_preset.mode = RunMode::RUN_MAIN;
+			current_preset->set_mode(RunMode::RUN_MAIN);
 			break;
 		case PLAY_POPUP_RUN_CURRENT:
-			current_preset.mode = RunMode::RUN_CURRENT;
+			current_preset->set_mode(RunMode::RUN_CURRENT);
 			break;
 		case PLAY_POPUP_RUN_SELECT_SCENE:
 			main_play_popup->hide();
@@ -409,17 +458,17 @@ void EditorRunBar::_on_popup_menu_id_pressed(int p_id) {
 			EditorNode::get_singleton()->get_quick_open_dialog()->popup_dialog({ "PackedScene" }, callable_mp(this, &EditorRunBar::_selected_scene));
 			break;
 		case PLAY_POPUP_RUN_DESTINATION_FLOATING_WINDOW:
-			current_preset.destination = RunDestination::DESTINATION_FLOATING_WINDOW;
+			current_preset->set_destination(RunDestination::DESTINATION_FLOATING_WINDOW);
 			break;
 		case PLAY_POPUP_RUN_DESTINATION_EMBEDDED_IN_EDITOR:
-			current_preset.destination = RunDestination::DESTINATION_EMBEDDED_IN_EDITOR;
-			current_preset.show_toolbar = true;
+			current_preset->set_destination(RunDestination::DESTINATION_EMBEDDED_IN_EDITOR);
+			current_preset->set_show_toolbar(true);
 			break;
 		case PLAY_POPUP_RUN_OPTIONS_SHOW_TOOLBAR:
-			current_preset.show_toolbar = !current_preset.show_toolbar;
+			current_preset->set_show_toolbar(!current_preset->get_show_toolbar());
 			break;
 		case PLAY_POPUP_RUN_OPTIONS_RUN_XR_ENABLED:
-			current_preset.run_xr_enabled = !current_preset.run_xr_enabled;
+			current_preset->set_run_xr_enabled(!current_preset->get_run_xr_enabled());
 			break;
 		case PLAY_POPUP_RUN_OPTIONS_MOVIE_MAKER_ENABLED:
 			set_movie_maker_enabled(!is_movie_maker_enabled());
@@ -436,11 +485,11 @@ void EditorRunBar::_on_popup_menu_id_pressed(int p_id) {
 				int platform_idx = EditorExport::decode_platform_from_id(p_id >> PLAY_POPUP_EXTRA_INFO);
 				int device_idx = EditorExport::decode_device_from_id(p_id >> PLAY_POPUP_EXTRA_INFO);
 				if (EditorExport::get_singleton()->get_export_platform(platform_idx)->is_option_runnable(device_idx)) {
-					current_preset.destination = RunDestination::DESTINATION_REMOTE;
-					current_preset.show_toolbar = false;
-					current_preset.mode = RunMode::RUN_MAIN; // Remote run only supports running the main scene for now, so switch to this mode if not already.
-					current_preset.remote_platform_id = platform_idx;
-					current_preset.remote_device_id = device_idx;
+					current_preset->set_destination(RunDestination::DESTINATION_REMOTE);
+					current_preset->set_show_toolbar(false);
+					current_preset->set_mode(RunMode::RUN_MAIN); // Remote run only supports running the main scene for now, so switch to this mode if not already.
+					current_preset->set_remote_platform_id(platform_idx);
+					current_preset->set_remote_device_id(device_idx);
 				} else {
 					start_run_native(platform_idx, device_idx);
 				}
@@ -452,8 +501,8 @@ void EditorRunBar::_on_popup_menu_id_pressed(int p_id) {
 }
 
 void EditorRunBar::_selected_scene(const String p_scene_path) {
-	current_preset.mode = RunMode::RUN_CUSTOM;
-	current_preset.custom_scene_path = p_scene_path;
+	current_preset->set_mode(RunMode::RUN_CUSTOM);
+	current_preset->set_custom_scene_path(p_scene_path);
 	last_runned_scenes.erase(p_scene_path);
 	last_runned_scenes.insert(0, p_scene_path);
 	if (last_runned_scenes.size() > MAX_CACHED_RUN_SCENES) {
@@ -466,7 +515,7 @@ void EditorRunBar::_selected_scene(const String p_scene_path) {
 }
 
 void EditorRunBar::_selected_running_scene(const String p_scene_path) {
-	running_preset->custom_scene_path = p_scene_path;
+	running_preset->set_running_scene_path(p_scene_path);
 	resume_running_preset();
 }
 
@@ -490,28 +539,38 @@ void EditorRunBar::play_current_scene(const Vector<String> &p_play_args) {
 void EditorRunBar::play_custom_scene(const String &p_scene_path, const Vector<String> &p_play_args) {
 }
 
-void EditorRunBar::play_preset(RunPreset &p_preset) {
-	running_preset = &p_preset;
-	if (p_preset.mode == RUN_CUSTOM && p_preset.custom_scene_path.is_empty()) {
-		EditorNode::get_singleton()->get_quick_open_dialog()->popup_dialog(
-				{ "PackedScene" },
-				callable_mp(this, &EditorRunBar::_selected_running_scene));
+void EditorRunBar::play_preset(const Ref<RunPreset> p_preset) {
+	if (p_preset->get_destination() == DESTINATION_REMOTE) {
+		Error err = start_run_native(p_preset->get_remote_platform_id(), p_preset->get_remote_device_id());
+		if (err == OK) {
+			Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(p_preset->get_remote_platform_id());
+			if (eep->is_option_runnable(p_preset->get_remote_device_id())) {
+				running_preset = p_preset;
+				emit_signal(SNAME("play_pressed"));
+				stop_button->set_disabled(!eep->is_option_stoppable(p_preset->get_remote_device_id()));
+			}
+		}
+		return;
 	}
 	if (editor_run.get_status() == EditorRun::STATUS_PLAY) {
 		stop_playing();
 	}
+	running_preset = p_preset;
 
-	if (p_preset.destination == DESTINATION_REMOTE) {
-		start_run_native(p_preset.remote_platform_id, p_preset.remote_device_id);
+	if (p_preset->get_mode() == RUN_CUSTOM && p_preset->needs_selecting_custom_scene_path() && p_preset->get_custom_scene_path().is_empty()) {
+		EditorNode::get_singleton()->get_quick_open_dialog()->popup_dialog(
+				{ "PackedScene" },
+				callable_mp(this, &EditorRunBar::_selected_running_scene));
 		return;
 	}
+	resume_running_preset();
+}
 
-	Vector<String> play_args = _get_xr_mode_play_args(p_preset.run_xr_enabled ? RunXRModeMenuItem::ON : RunXRModeMenuItem::OFF);
-
+void EditorRunBar::resume_running_preset() {
 	String run_filename;
-	switch (p_preset.mode) {
+	switch (running_preset->get_mode()) {
 		case RUN_CUSTOM: {
-			run_filename = ResourceUID::ensure_path(p_preset.custom_scene_path);
+			run_filename = ResourceUID::ensure_path(running_preset->get_custom_scene_path());
 			run_custom_filename = run_filename;
 		} break;
 
@@ -541,10 +600,27 @@ void EditorRunBar::play_preset(RunPreset &p_preset) {
 	}
 
 	GameView::get_singleton()->set_embed_options(
-			p_preset.show_toolbar,
-			p_preset.destination == DESTINATION_FLOATING_WINDOW);
+			running_preset->get_show_toolbar(),
+			running_preset->get_destination() == DESTINATION_FLOATING_WINDOW);
 
 	run_current_filename = run_filename;
+
+	Vector<String> play_args;
+#ifndef XR_DISABLED
+	if (XRServer::get_xr_mode() == XRServer::XRMODE_ON ||
+			(XRServer::get_xr_mode() == XRServer::XRMODE_DEFAULT && GLOBAL_GET("xr/openxr/enabled"))) {
+		if (running_preset->get_run_xr_enabled()) {
+			// Play in regular mode, xr mode off.
+			play_args.push_back("--xr-mode");
+			play_args.push_back("on");
+		} else {
+			// Play in xr mode.
+			play_args.push_back("--xr-mode");
+			play_args.push_back("off");
+		}
+	}
+#endif // XR_DISABLED
+
 	_run_scene(run_filename, play_args);
 }
 
@@ -553,7 +629,14 @@ void EditorRunBar::stop_playing() {
 		return;
 	}
 
-	running_preset = nullptr;
+	if (running_preset.is_valid()) {
+		if (running_preset->get_destination() == DESTINATION_REMOTE) {
+			Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(running_preset->get_remote_platform_id());
+			eep->stop();
+		}
+		running_preset->stop();
+		running_preset = nullptr;
+	}
 	editor_run.stop();
 	EditorDebuggerNode::get_singleton()->stop();
 
@@ -564,6 +647,12 @@ void EditorRunBar::stop_playing() {
 	_reset_play_buttons();
 
 	emit_signal(SNAME("stop_pressed"));
+}
+
+void EditorRunBar::notify_all_debug_sessions_exited() {
+	if (running_preset.is_valid() && running_preset->get_destination() != DESTINATION_REMOTE) {
+		stop_playing();
+	}
 }
 
 bool EditorRunBar::is_playing() const {
@@ -578,6 +667,10 @@ String EditorRunBar::get_playing_scene() const {
 	}
 
 	return run_filename;
+}
+
+Ref<RunPreset> EditorRunBar::get_running_preset() const {
+	return running_preset;
 }
 
 ProcessID EditorRunBar::has_child_process(ProcessID p_pid) const {
@@ -638,6 +731,77 @@ HBoxContainer *EditorRunBar::get_buttons_container() {
 void EditorRunBar::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("play_pressed"));
 	ADD_SIGNAL(MethodInfo("stop_pressed"));
+}
+
+Error EditorRunBar::start_run_native(int p_platform, int p_device) {
+	if (!EditorNode::get_singleton()->ensure_main_scene(true)) {
+		return OK;
+	}
+
+	Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(p_platform);
+	ERR_FAIL_COND_V(eep.is_null(), ERR_UNAVAILABLE);
+
+	Ref<EditorExportPreset> preset = EditorExport::get_singleton()->get_runnable_preset_for_platform(eep);
+	if (preset.is_null()) {
+		EditorNode::get_singleton()->show_warning(TTR("No runnable export preset found for this platform.\nPlease add a runnable preset in the Export menu or define an existing preset as runnable."));
+		return ERR_UNAVAILABLE;
+	}
+
+	String architecture = eep->get_device_architecture(p_device);
+	if (!run_native_confirmed && !architecture.is_empty()) {
+		String preset_arch = "architectures/" + architecture;
+		bool is_arch_enabled = preset->get(preset_arch);
+
+		if (!is_arch_enabled) {
+			run_native_confirm->set_text(vformat(TTR("Warning: The CPU architecture \"%s\" is not active in your export preset.\n\nRun \"Remote Deploy\" anyway?"), architecture));
+			run_native_confirm->popup_centered();
+			return OK;
+		}
+	}
+	run_native_confirmed = false;
+
+	preset->update_value_overrides();
+
+	if (eep->is_option_runnable(p_device)) {
+		EditorNode::get_singleton()->try_autosave();
+		stop_playing();
+		if (EditorSettings::get_singleton()->get_project_metadata("debug_options", "run_deploy_remote_debug", true)) {
+			if (EditorNode::get_singleton()->call_build()) {
+				EditorDebuggerNode::get_singleton()->start(preset->get_platform()->get_debug_protocol());
+				editor_run.run_native_notify();
+			}
+		}
+	}
+
+	BitField<EditorExportPlatform::DebugFlags> flags = 0;
+
+	bool deploy_debug_remote = EditorSettings::get_singleton()->get_project_metadata("debug_options", "run_deploy_remote_debug", true);
+	bool deploy_dumb = EditorSettings::get_singleton()->get_project_metadata("debug_options", "run_file_server", false);
+	bool debug_collisions = EditorSettings::get_singleton()->get_project_metadata("debug_options", "run_debug_collisions", false);
+	bool debug_navigation = EditorSettings::get_singleton()->get_project_metadata("debug_options", "run_debug_navigation", false);
+
+	if (deploy_debug_remote) {
+		flags.set_flag(EditorExportPlatform::DEBUG_FLAG_REMOTE_DEBUG);
+	}
+	if (deploy_dumb) {
+		flags.set_flag(EditorExportPlatform::DEBUG_FLAG_DUMB_CLIENT);
+	}
+	if (debug_collisions) {
+		flags.set_flag(EditorExportPlatform::DEBUG_FLAG_VIEW_COLLISIONS);
+	}
+	if (debug_navigation) {
+		flags.set_flag(EditorExportPlatform::DEBUG_FLAG_VIEW_NAVIGATION);
+	}
+
+	eep->clear_messages();
+	Error err = eep->run(preset, p_device, flags);
+	native_result_dialog_log->clear();
+	if (eep->fill_log_messages(native_result_dialog_log, err)) {
+		if (eep->get_worst_message_type() >= EditorExportPlatform::EXPORT_MESSAGE_ERROR) {
+			native_result_dialog->popup_centered_ratio(0.5);
+		}
+	}
+	return err;
 }
 
 EditorRunBar::EditorRunBar() {
@@ -710,7 +874,6 @@ EditorRunBar::EditorRunBar() {
 	main_play_popup->connect(SceneStringName(id_pressed), callable_mp(this, &EditorRunBar::_on_popup_menu_id_pressed));
 	main_play_popup->set_hide_on_item_selection(false);
 	main_play_popup->set_hide_on_checkable_item_selection(false);
-	_generate_popup_menu();
 
 	// here need to modify the play button to run what is selected above
 	play_button = memnew(Button);
@@ -757,6 +920,7 @@ EditorRunBar::EditorRunBar() {
 	native_result_dialog_log = memnew(RichTextLabel);
 	native_result_dialog_log->set_custom_minimum_size(Size2(300, 80) * EDSCALE);
 	native_result_dialog->add_child(native_result_dialog_log);
+	add_child(native_result_dialog);
 
 	ED_SHORTCUT("remote_deploy/deploy_to_device_1", TTRC("Deploy to First Device in List"), KeyModifierMask::SHIFT | Key::F5);
 	ED_SHORTCUT_OVERRIDE("remote_deploy/deploy_to_device_1", "macos", KeyModifierMask::META | KeyModifierMask::SHIFT | Key::B);
@@ -764,87 +928,15 @@ EditorRunBar::EditorRunBar() {
 	ED_SHORTCUT("remote_deploy/deploy_to_device_3", TTRC("Deploy to Third Device in List"));
 	ED_SHORTCUT("remote_deploy/deploy_to_device_4", TTRC("Deploy to Fourth Device in List"));
 
-	add_child(native_result_dialog);
+	preset_hbox = memnew(HBoxContainer);
+	main_hbox->add_child(preset_hbox);
+
+	presets_menu_button = memnew(MenuButton);
+	presets_menu_button->get_popup()->connect(SceneStringName(id_pressed), callable_mp(this, &EditorRunBar::_on_presets_menu_item_pressed));
+	presets_menu_button->connect(SNAME("about_to_popup"), callable_mp(this, &EditorRunBar::_update_presets_menu_button));
+	preset_hbox->add_child(presets_menu_button);
+
+	run_preset_manager_dialog = memnew(RunPresetManagerDialog);
+	run_preset_manager_dialog->connect("presets_changed", callable_mp(this, &EditorRunBar::_generate_presets_buttons), CONNECT_DEFERRED);
+	add_child(run_preset_manager_dialog);
 }
-
-Error EditorRunBar::start_run_native(int platform, int device) {
-	if (!EditorNode::get_singleton()->ensure_main_scene(true)) {
-		return OK;
-	}
-
-	Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(platform);
-	ERR_FAIL_COND_V(eep.is_null(), ERR_UNAVAILABLE);
-
-	Ref<EditorExportPreset> preset = EditorExport::get_singleton()->get_runnable_preset_for_platform(eep);
-	if (preset.is_null()) {
-		EditorNode::get_singleton()->show_warning(TTR("No runnable export preset found for this platform.\nPlease add a runnable preset in the Export menu or define an existing preset as runnable."));
-		return ERR_UNAVAILABLE;
-	}
-
-	String architecture = eep->get_device_architecture(device);
-	if (!run_native_confirmed && !architecture.is_empty()) {
-		String preset_arch = "architectures/" + architecture;
-		bool is_arch_enabled = preset->get(preset_arch);
-
-		if (!is_arch_enabled) {
-			run_native_confirm->set_text(vformat(TTR("Warning: The CPU architecture \"%s\" is not active in your export preset.\n\nRun \"Remote Deploy\" anyway?"), architecture));
-			run_native_confirm->popup_centered();
-			return OK;
-		}
-	}
-	run_native_confirmed = false;
-
-	preset->update_value_overrides();
-
-	if (eep->is_option_runnable(device)) {
-		EditorNode::get_singleton()->try_autosave();
-
-		if (EditorSettings::get_singleton()->get_project_metadata("debug_options", "run_deploy_remote_debug", true)) {
-			stop_playing();
-
-			if (EditorNode::get_singleton()->call_build()) {
-				EditorDebuggerNode::get_singleton()->start(preset->get_platform()->get_debug_protocol());
-				emit_signal(SNAME("play_pressed"));
-				editor_run.run_native_notify();
-			}
-		}
-	}
-
-	BitField<EditorExportPlatform::DebugFlags> flags = 0;
-
-	bool deploy_debug_remote = EditorSettings::get_singleton()->get_project_metadata("debug_options", "run_deploy_remote_debug", true);
-	bool deploy_dumb = EditorSettings::get_singleton()->get_project_metadata("debug_options", "run_file_server", false);
-	bool debug_collisions = EditorSettings::get_singleton()->get_project_metadata("debug_options", "run_debug_collisions", false);
-	bool debug_navigation = EditorSettings::get_singleton()->get_project_metadata("debug_options", "run_debug_navigation", false);
-
-	if (deploy_debug_remote) {
-		flags.set_flag(EditorExportPlatform::DEBUG_FLAG_REMOTE_DEBUG);
-	}
-	if (deploy_dumb) {
-		flags.set_flag(EditorExportPlatform::DEBUG_FLAG_DUMB_CLIENT);
-	}
-	if (debug_collisions) {
-		flags.set_flag(EditorExportPlatform::DEBUG_FLAG_VIEW_COLLISIONS);
-	}
-	if (debug_navigation) {
-		flags.set_flag(EditorExportPlatform::DEBUG_FLAG_VIEW_NAVIGATION);
-	}
-
-	eep->clear_messages();
-	Error err = eep->run(preset, device, flags);
-	native_result_dialog_log->clear();
-	if (eep->fill_log_messages(native_result_dialog_log, err)) {
-		if (eep->get_worst_message_type() >= EditorExportPlatform::EXPORT_MESSAGE_ERROR) {
-			native_result_dialog->popup_centered_ratio(0.5);
-		}
-	}
-	return err;
-}
-
-void EditorRunBar::resume_running_preset() {
-	play_preset(*running_preset);
-}
-
-// void EditorRunBar::_bind_methods() {
-// 	ADD_SIGNAL(MethodInfo("native_run", PropertyInfo(Variant::OBJECT, "preset", PROPERTY_HINT_RESOURCE_TYPE, EditorExportPreset::get_class_static())));
-// }

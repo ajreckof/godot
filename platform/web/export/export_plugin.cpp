@@ -696,18 +696,21 @@ int EditorExportPlatformWeb::get_options_count() const {
 		} break;
 
 		case REMOTE_DEBUG_STATE_SERVING: {
-			return 3;
+			return 2;
 		} break;
 	}
 
 	return 0;
 }
 
+bool EditorExportPlatformWeb::is_option_stoppable(int p_index) const {
+	return true;
+}
+
 String EditorExportPlatformWeb::get_option_label(int p_index) const {
 	String run_in_browser = TTR("Run in Browser");
 	String start_http_server = TTR("Start HTTP Server");
 	String reexport_project = TTR("Re-export Project");
-	String stop_http_server = TTR("Stop HTTP Server");
 
 	switch (remote_debug_state) {
 		case REMOTE_DEBUG_STATE_UNAVAILABLE:
@@ -730,8 +733,6 @@ String EditorExportPlatformWeb::get_option_label(int p_index) const {
 					return run_in_browser;
 				case 1:
 					return reexport_project;
-				case 2:
-					return stop_http_server;
 				default:
 					ERR_FAIL_V("");
 			}
@@ -745,7 +746,6 @@ String EditorExportPlatformWeb::get_option_tooltip(int p_index) const {
 	String run_in_browser = TTR("Run exported HTML in the system's default browser.");
 	String start_http_server = TTR("Start the HTTP server.");
 	String reexport_project = TTR("Export project again to account for updates.");
-	String stop_http_server = TTR("Stop the HTTP server.");
 
 	switch (remote_debug_state) {
 		case REMOTE_DEBUG_STATE_UNAVAILABLE:
@@ -768,8 +768,6 @@ String EditorExportPlatformWeb::get_option_tooltip(int p_index) const {
 					return run_in_browser;
 				case 1:
 					return reexport_project;
-				case 2:
-					return stop_http_server;
 				default:
 					ERR_FAIL_V("");
 			}
@@ -836,11 +834,6 @@ Error EditorExportPlatformWeb::run(const Ref<EditorExportPreset> &p_preset, int 
 					return _export_project(p_preset, p_debug_flags);
 				} break;
 
-				// Stop HTTP Server.
-				case 2: {
-					return _stop_server();
-				} break;
-
 				default: {
 					ERR_FAIL_V_MSG(FAILED, vformat(R"(Invalid option "%s" for the current state.)", p_option));
 				}
@@ -849,6 +842,10 @@ Error EditorExportPlatformWeb::run(const Ref<EditorExportPreset> &p_preset, int 
 	}
 
 	return FAILED;
+}
+
+Error EditorExportPlatformWeb::stop() {
+	return _stop_server();
 }
 
 Error EditorExportPlatformWeb::_export_project(const Ref<EditorExportPreset> &p_preset, int p_debug_flags) {

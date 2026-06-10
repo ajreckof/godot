@@ -341,6 +341,7 @@ public:
 	virtual bool poll_export() { return false; }
 	virtual int get_options_count() const { return 0; }
 	virtual bool is_option_runnable(int p_index) const { return true; }
+	virtual bool is_option_stoppable(int p_index) const { return true; }
 	virtual String get_options_tooltip() const { return ""; }
 	virtual Ref<Texture2D> get_option_icon(int p_index) const;
 	virtual String get_option_label(int p_device) const { return ""; }
@@ -349,6 +350,7 @@ public:
 
 	virtual void cleanup() {}
 	virtual Error run(const Ref<EditorExportPreset> &p_preset, int p_device, BitField<EditorExportPlatform::DebugFlags> p_debug_flags) { return OK; }
+	virtual Error stop() { return OK; }
 	virtual Ref<Texture2D> get_run_icon() const { return get_logo(); }
 
 	virtual bool can_export(const Ref<EditorExportPreset> &p_preset, String &r_error, bool &r_missing_templates, bool p_debug = false) const;
