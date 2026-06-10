@@ -129,10 +129,12 @@ public:
 
 	virtual bool poll_export() override;
 	virtual int get_options_count() const override;
+	virtual bool is_option_stoppable(int p_index) const override;
 	virtual String get_option_label(int p_index) const override;
 	virtual String get_option_tooltip(int p_index) const override;
 	virtual Ref<Texture2D> get_option_icon(int p_index) const override;
 	virtual Error run(const Ref<EditorExportPreset> &p_preset, int p_option, BitField<EditorExportPlatform::DebugFlags> p_debug_flags) override;
+	virtual Error stop() override;
 	virtual Ref<Texture2D> get_run_icon() const override;
 
 	virtual void get_platform_features(List<String> *r_features) const override {
