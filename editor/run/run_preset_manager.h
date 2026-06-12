@@ -45,7 +45,6 @@ private:
 	TypedArray<Dictionary> default_presets;
 	EditorInspector *preset_inspector;
 	Dictionary new_preset;
-	Label *no_presets_selected_label;
 
 	void _on_add_pressed();
 	void _on_remove_pressed();
@@ -58,6 +57,9 @@ private:
 
 protected:
 	static void _bind_methods();
+	void _notification(int p_what);
+
+	void _on_parent_theme_changed();
 
 public:
 	Vector<Ref<RunPreset>> get_presets() const { return presets; }
