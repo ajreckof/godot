@@ -204,7 +204,7 @@ Ref<Texture2D> EditorExportPlatformExtension::get_option_icon(int p_index) const
 String EditorExportPlatformExtension::get_option_label(int p_device) const {
 	String ret;
 	GDVIRTUAL_CALL(_get_option_label, p_device, ret);
-	return ret;
+	return get_name() + ": " + ret;
 }
 
 String EditorExportPlatformExtension::get_option_tooltip(int p_device) const {

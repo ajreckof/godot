@@ -41,6 +41,7 @@ class RunPresetButton : public Button {
 	void _on_popup_id_pressed(int id);
 	void _update_button();
 	void _update_popup();
+	void _on_parent_theme_changed();
 
 	PopupMenu *popup = nullptr;
 

@@ -91,7 +91,35 @@ void RunPreset::stop() {
 }
 
 String RunPreset::get_name() const {
-	return name;
+	if (!name.is_empty()) {
+		return name;
+	}
+	if (get_destination() == DESTINATION_REMOTE) {
+		if (!get_select_remote_platform_id()) {
+			Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(get_remote_platform_id());
+			if (eep.is_valid()) {
+				if (select_remote_device_id) {
+					return TTR("Remote: ") + eep->get_name();
+				} else {
+					return TTR("Remote: " + eep->get_option_label(remote_device_id));
+				}
+			}
+		}
+		return TTR("Remote");
+	}
+
+	switch (get_mode()) {
+		case RunMode::RUN_MAIN:
+			return TTR("Main Scene");
+			break;
+		case RunMode::RUN_CURRENT:
+			return TTR("Current Scene");
+			break;
+		case RunMode::RUN_CUSTOM:
+			return TTR("Custom Scene: ") + get_custom_scene_path().get_file();
+			break;
+	}
+	ERR_FAIL_V("unnamed preset");
 }
 void RunPreset::set_name(const String &p_name) {
 	name = p_name;
@@ -107,14 +135,14 @@ void RunPreset::set_use_custom_icon(bool p_use) {
 	notify_property_list_changed();
 }
 
-String RunPreset::get_custom_icon_file_path() const {
+String RunPreset::get_custom_icon_uid() const {
 	if (custom_icon.is_null()) {
 		return "";
 	}
-	return custom_icon->get_path();
+	return ResourceUID::path_to_uid(custom_icon->get_path());
 }
-void RunPreset::set_custom_icon_file_path(const String &p_file_path) {
-	custom_icon = ResourceLoader::load(p_file_path);
+void RunPreset::set_custom_icon_uid(const String &p_uid) {
+	custom_icon = ResourceLoader::load(p_uid);
 	emit_signal("changed");
 }
 
@@ -150,6 +178,7 @@ int RunPreset::get_mode_as_int() const {
 }
 
 void RunPreset::set_mode_as_int(int p_mode) {
+	ERR_FAIL_COND_MSG(p_mode < -1 || p_mode > 2, "Invalid mode value");
 	if (p_mode == -1) {
 		use_current_mode = true;
 	} else {
@@ -200,6 +229,7 @@ int RunPreset::get_destination_as_int() const {
 }
 
 void RunPreset::set_destination_as_int(int p_destination) {
+	ERR_FAIL_COND_MSG(p_destination < -1 || p_destination > 2, "Invalid destination value");
 	if (p_destination == -1) {
 		use_current_destination = true;
 	} else {
@@ -369,7 +399,7 @@ Dictionary RunPreset::to_dict() const {
 
 	dict["use_custom_icon"] = use_custom_icon;
 	if (use_custom_icon) {
-		dict["custom_icon"] = custom_icon->get_path();
+		dict["custom_icon"] = custom_icon.is_valid() ? custom_icon->get_path() : "";
 	} else {
 		dict["editor_icon"] = editor_icon;
 	}
@@ -398,12 +428,11 @@ Ref<RunPreset> RunPreset::from_dict(const Dictionary &dict) {
 		// If the dictionary is empty, we return a default preset. This can happen if the metadata was not set yet, or if it was cleared because of an error during loading (e.g. due to incompatible data).
 	}
 	preset->name = dict.get("name", "");
-	preset->set_mode_as_int(static_cast<RunMode>(int(dict.get("mode", 0))));
+	preset->set_mode_as_int(dict.get("mode", 0));
 	if (preset->get_mode() == RUN_CUSTOM) {
 		preset->set_custom_scene_path(dict.get("custom_scene_path", ""));
 	}
-	preset->set_custom_scene_path(dict.get("custom_scene_path", ""));
-	preset->set_destination_as_int(static_cast<RunDestination>(int(dict.get("destination", 0))));
+	preset->set_destination_as_int(dict.get("destination", 0));
 	preset->set_remote_platform_id_as_int(dict.get("remote_platform_id", -1));
 	preset->set_remote_device_id_as_int(dict.get("remote_device_id", -1));
 	preset->set_show_toolbar_as_int(dict.get("show_toolbar", true));
@@ -429,9 +458,9 @@ void RunPreset::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_use_custom_icon", "use"), &RunPreset::set_use_custom_icon);
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_custom_icon"), "set_use_custom_icon", "get_use_custom_icon");
 
-	ClassDB::bind_method(D_METHOD("get_custom_icon_file_path"), &RunPreset::get_custom_icon_file_path);
-	ClassDB::bind_method(D_METHOD("set_custom_icon_file_path", "file_path"), &RunPreset::set_custom_icon_file_path);
-	ADD_PROPERTY(PropertyInfo(Variant::STRING, "custom_icon_file_path", PROPERTY_HINT_FILE, "*.bmp,*.dds,*.exr,*.jpeg,*.jpg,*.hdr,*.png,*.svg,*.tga,*.webp"), "set_custom_icon_file_path", "get_custom_icon_file_path");
+	ClassDB::bind_method(D_METHOD("get_custom_icon_uid"), &RunPreset::get_custom_icon_uid);
+	ClassDB::bind_method(D_METHOD("set_custom_icon_uid", "uid"), &RunPreset::set_custom_icon_uid);
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "custom_icon", PROPERTY_HINT_FILE, "*.bmp,*.dds,*.exr,*.jpeg,*.jpg,*.hdr,*.png,*.svg,*.tga,*.webp"), "set_custom_icon_uid", "get_custom_icon_uid");
 
 	ClassDB::bind_method(D_METHOD("get_editor_icon"), &RunPreset::get_editor_icon);
 	ClassDB::bind_method(D_METHOD("set_editor_icon", "icon"), &RunPreset::set_editor_icon);
@@ -477,7 +506,7 @@ void RunPreset::_validate_property(PropertyInfo &p_property) const {
 		} else {
 			p_property.usage |= PROPERTY_USAGE_EDITOR;
 		}
-	} else if (p_property.name == "custom_icon_file_path") {
+	} else if (p_property.name == "custom_icon_uid") {
 		if (use_custom_icon) {
 			p_property.usage |= PROPERTY_USAGE_EDITOR;
 		} else {

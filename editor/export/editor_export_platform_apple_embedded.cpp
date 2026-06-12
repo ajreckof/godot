@@ -2419,7 +2419,7 @@ Ref<Texture2D> EditorExportPlatformAppleEmbedded::get_option_icon(int p_index) c
 String EditorExportPlatformAppleEmbedded::get_option_label(int p_index) const {
 	ERR_FAIL_INDEX_V(p_index, devices.size(), "");
 	MutexLock lock(device_lock);
-	return devices[p_index].name;
+	return get_name() + ": " + devices[p_index].name;
 }
 
 String EditorExportPlatformAppleEmbedded::get_option_tooltip(int p_index) const {

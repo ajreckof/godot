@@ -62,6 +62,11 @@ void RunPresetButton::_notification(int p_what) {
 			_update_button();
 			break;
 		}
+		case NOTIFICATION_ENTER_TREE: {
+			get_parent()->connect(SceneStringName(theme_changed), callable_mp(this, &RunPresetButton::_on_parent_theme_changed));
+			_on_parent_theme_changed();
+			break;
+		}
 	}
 }
 
@@ -118,6 +123,10 @@ void RunPresetButton::_update_popup() {
 	for (RunPresetOptions option : preset->get_options()) {
 		popup->add_icon_item(option.icon, option.name, option.id);
 	}
+}
+
+void RunPresetButton::_on_parent_theme_changed() {
+	add_theme_constant_override("icon_max_width", get_theme_constant("class_icon_size", EditorStringName(Editor)));
 }
 
 void RunPresetButton::show_popup() {

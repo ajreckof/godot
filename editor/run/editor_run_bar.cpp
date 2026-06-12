@@ -137,6 +137,7 @@ void EditorRunBar::_notification(int p_what) {
 			stop_button->set_button_icon(get_editor_theme_icon(SNAME("Stop")));
 
 			presets_menu_button->set_button_icon(get_editor_theme_icon(SNAME("GuiTabMenuHl")));
+			presets_menu_button->get_popup()->add_theme_constant_override("icon_max_width", get_theme_constant("class_icon_size", EditorStringName(Editor)));
 
 		} break;
 
@@ -299,20 +300,7 @@ void EditorRunBar::_profiler_autostart_indicator_pressed() {
 }
 
 void EditorRunBar::_generate_popup_menu() {
-	switch (current_preset->get_mode()) {
-		case RunMode::RUN_MAIN:
-			main_play_menu_button->set_text(TTR("Main Scene"));
-			break;
-		case RunMode::RUN_CURRENT:
-			main_play_menu_button->set_text(TTR("Current Scene"));
-			break;
-		case RunMode::RUN_CUSTOM:
-			main_play_menu_button->set_text(TTR("Custom Scene : ") + current_preset->get_custom_scene_path().get_file());
-			/* code */
-			break;
-		default:
-			break;
-	}
+	main_play_menu_button->set_text(current_preset->get_name());
 
 	main_play_popup->clear();
 
@@ -355,7 +343,7 @@ void EditorRunBar::_generate_popup_menu() {
 		if (device_count > 0) {
 			for (int j = 0; j < device_count; j++) {
 				if (eep->is_option_runnable(j)) {
-					main_play_popup->add_icon_radio_check_item(eep->get_option_icon(j), eep->get_name() + " : " + eep->get_option_label(j), (EditorExport::encode_platform_device_id(i, j) << PLAY_POPUP_EXTRA_INFO) + PLAY_POPUP_RUN_DESTINATION_REMOTE);
+					main_play_popup->add_icon_radio_check_item(eep->get_option_icon(j), eep->get_option_label(j), (EditorExport::encode_platform_device_id(i, j) << PLAY_POPUP_EXTRA_INFO) + PLAY_POPUP_RUN_DESTINATION_REMOTE);
 					main_play_popup->set_item_checked(-1, current_preset->get_destination() == DESTINATION_REMOTE && current_preset->get_remote_platform_id() == i && current_preset->get_remote_device_id() == j);
 
 					if (device_shortcut_id <= 4) {
@@ -427,6 +415,9 @@ void EditorRunBar::_generate_presets_buttons() {
 void EditorRunBar::_update_presets_menu_button() {
 	presets_menu_button->get_popup()->clear(true);
 	for (Ref<RunPreset> preset : run_preset_manager_dialog->get_presets()) {
+		if (preset->is_pinned()) {
+			continue;
+		}
 		Vector<RunPresetOptions> options = preset->get_options();
 		if (options.is_empty()) {
 			presets_menu_button->get_popup()->add_icon_item(preset->get_icon(), preset->get_name());
@@ -440,7 +431,7 @@ void EditorRunBar::_update_presets_menu_button() {
 			presets_menu_button->get_popup()->set_item_icon(-1, preset->get_icon());
 		}
 	}
-	presets_menu_button->get_popup()->add_item(TTR("Manage Presets..."));
+	presets_menu_button->get_popup()->add_item(TTR("Manage Presets..."), run_preset_manager_dialog->get_presets().size());
 }
 
 void EditorRunBar::_on_popup_menu_id_pressed(int p_id) {
@@ -488,8 +479,8 @@ void EditorRunBar::_on_popup_menu_id_pressed(int p_id) {
 					current_preset->set_destination(RunDestination::DESTINATION_REMOTE);
 					current_preset->set_show_toolbar(false);
 					current_preset->set_mode(RunMode::RUN_MAIN); // Remote run only supports running the main scene for now, so switch to this mode if not already.
-					current_preset->set_remote_platform_id(platform_idx);
-					current_preset->set_remote_device_id(device_idx);
+					current_preset->set_remote_platform_id_as_int(platform_idx);
+					current_preset->set_remote_device_id_as_int(device_idx);
 				} else {
 					start_run_native(platform_idx, device_idx);
 				}

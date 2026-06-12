@@ -31,6 +31,7 @@
 #include "run_preset_manager.h"
 
 #include "core/object/callable_mp.h"
+#include "editor/editor_string_names.h"
 #include "editor/inspector/editor_inspector.h"
 #include "editor/run/run_preset.h"
 #include "editor/settings/editor_settings.h"
@@ -69,7 +70,6 @@ void RunPresetManagerDialog::_on_preset_selected(int p_index) {
 	Ref<RunPreset> preset = presets[p_index];
 	preset_inspector->edit(preset.ptr());
 	preset_inspector->show();
-	no_presets_selected_label->hide();
 }
 
 void RunPresetManagerDialog::_on_preset_property_edited() {
@@ -81,6 +81,10 @@ void RunPresetManagerDialog::_on_preset_property_edited() {
 
 void RunPresetManagerDialog::_update_preset_list() {
 	Ref<RunPreset> selected_preset = (Ref<RunPreset>)preset_inspector->get_edited_object();
+	int selected_index = 0;
+	if (presets_list->is_anything_selected()) {
+		selected_index = presets_list->get_selected_items()[0];
+	}
 	presets_list->clear();
 	for (Ref<RunPreset> &preset : presets) {
 		presets_list->add_item(preset->get_name(), preset->get_icon());
@@ -89,8 +93,15 @@ void RunPresetManagerDialog::_update_preset_list() {
 		}
 	}
 	if (!presets_list->is_anything_selected()) {
-		preset_inspector->hide();
-		no_presets_selected_label->show();
+		if (presets.size() > selected_index) {
+			preset_inspector->edit(presets[selected_index].ptr());
+			presets_list->select(selected_index);
+		} else if (presets.size() > 0) {
+			preset_inspector->edit(presets[presets.size() - 1].ptr());
+			presets_list->select(presets.size() - 1);
+		} else {
+			preset_inspector->edit(nullptr);
+		}
 	}
 	save_presets();
 	emit_signal("presets_changed");
@@ -108,6 +119,23 @@ void RunPresetManagerDialog::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("presets_changed"));
 }
 
+void RunPresetManagerDialog::_notification(int p_what) {
+	switch (p_what) {
+		case NOTIFICATION_THEME_CHANGED: {
+			_update_preset_list();
+			break;
+		}
+		case NOTIFICATION_ENTER_TREE: {
+			get_parent()->connect(SceneStringName(theme_changed), callable_mp(this, &RunPresetManagerDialog::_on_parent_theme_changed));
+			_on_parent_theme_changed();
+		} break;
+	}
+}
+
+void RunPresetManagerDialog::_on_parent_theme_changed() {
+	presets_list->set_fixed_icon_size(get_theme_constant("class_icon_size", EditorStringName(Editor)) * Vector2(1, 1));
+}
+
 RunPresetManagerDialog::RunPresetManagerDialog() {
 	HSplitContainer *split = memnew(HSplitContainer);
 	add_child(split);
@@ -118,7 +146,7 @@ RunPresetManagerDialog::RunPresetManagerDialog() {
 	presets_list = memnew(ItemList);
 	vbox->add_child(presets_list);
 	presets_list->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	// TODO : reprendre ca pour faire en sorte que ca soit call qu'une fois par frame
+	presets_list->set_theme_type_variation("TreeSecondary");
 	presets_list->connect(SceneStringName(item_selected), callable_mp(this, &RunPresetManagerDialog::_on_preset_selected));
 
 	HBoxContainer *button_bar = memnew(HBoxContainer);
@@ -141,6 +169,7 @@ RunPresetManagerDialog::RunPresetManagerDialog() {
 
 	preset_inspector = memnew(EditorInspector);
 	preset_inspector->connect(SNAME("property_edited"), callable_mp(this, &RunPresetManagerDialog::_on_preset_property_edited).unbind(1));
+	preset_inspector->set_theme_type_variation("TreeSecondary");
 	split->add_child(preset_inspector);
 
 	new_preset["name"] = TTR("New Preset");
@@ -185,11 +214,5 @@ RunPresetManagerDialog::RunPresetManagerDialog() {
 	for (Dictionary preset_data : presets_data) {
 		presets.push_back(RunPreset::from_dict(preset_data));
 	}
-
-	no_presets_selected_label = memnew(Label);
-	no_presets_selected_label->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	no_presets_selected_label->set_text(TTR("No preset selected! Please select a preset to edit it here."));
-	split->add_child(no_presets_selected_label);
-
 	_update_preset_list();
 }

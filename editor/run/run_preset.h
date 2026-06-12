@@ -87,8 +87,8 @@ public:
 	bool get_use_custom_icon() const;
 	void set_use_custom_icon(bool p_use);
 
-	String get_custom_icon_file_path() const;
-	void set_custom_icon_file_path(const String &p_file_path);
+	String get_custom_icon_uid() const;
+	void set_custom_icon_uid(const String &p_uid);
 
 	String get_editor_icon() const;
 	void set_editor_icon(const String &p_icon);
