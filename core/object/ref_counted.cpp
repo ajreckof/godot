@@ -67,6 +67,12 @@ void RefCounted::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_reference_count"), &RefCounted::get_reference_count);
 }
 
+void RefCounted::_validate_property(PropertyInfo &p_property) const {
+	if (p_property.name == "RefCounted") {
+		p_property.usage |= PROPERTY_USAGE_NONE;
+	}
+}
+
 int RefCounted::get_reference_count() const {
 	return refcount.get();
 }

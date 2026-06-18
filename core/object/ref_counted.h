@@ -41,6 +41,7 @@ class RefCounted : public Object {
 
 protected:
 	static void _bind_methods();
+	void _validate_property(PropertyInfo &p_property) const;
 
 public:
 	static constexpr AncestralClass static_ancestral_class = AncestralClass::REF_COUNTED;
