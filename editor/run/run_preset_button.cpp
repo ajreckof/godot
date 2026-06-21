@@ -92,7 +92,7 @@ void RunPresetButton::_update_button() {
 	} else {
 		set_button_icon(preset->get_icon());
 	}
-	set_tooltip_text(preset->get_name());
+	set_tooltip_text(preset->get_preset_name());
 }
 
 void RunPresetButton::set_preset(const Ref<RunPreset> &p_preset) {
@@ -100,19 +100,22 @@ void RunPresetButton::set_preset(const Ref<RunPreset> &p_preset) {
 		return;
 	}
 	if (preset.is_valid()) {
-		preset->disconnect("changed", callable_mp(this, &RunPresetButton::_update_button));
-		preset->disconnect("changed", callable_mp(this, &RunPresetButton::_update_popup));
+		preset->disconnect_changed(callable_mp(this, &RunPresetButton::_update_preset));
 	}
 	preset = p_preset;
 	if (preset.is_null()) {
 		set_disabled(true);
 	} else {
-		preset->connect("changed", callable_mp(this, &RunPresetButton::_update_button));
-		preset->connect("changed", callable_mp(this, &RunPresetButton::_update_popup));
+		preset->connect_changed(callable_mp(this, &RunPresetButton::_update_preset));
 		set_disabled(false);
-		_update_button();
-		_update_popup();
+		_update_preset();
 	}
+}
+
+void RunPresetButton::_update_preset() {
+	set_shortcut(preset->get_shortcut());
+	_update_button();
+	_update_popup();
 }
 
 void RunPresetButton::_update_popup() {

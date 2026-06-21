@@ -30,9 +30,11 @@
 
 #pragma once
 
-#include "core/object/ref_counted.h"
+#include "core/io/resource.h"
 
 class Texture2D;
+class InputEventKey;
+class Shortcut;
 
 enum RunMode {
 	RUN_MAIN,
@@ -71,18 +73,19 @@ struct RunPresetOptions {
 
 	RunPresetOptions(int p_id, const String &p_name, const Ref<Texture2D> &p_icon) : id(p_id), name(p_name), icon(p_icon) {}
 };
-class RunPreset : public RefCounted {
-	GDCLASS(RunPreset, RefCounted);
+class RunPreset : public Resource {
+	GDCLASS(RunPreset, Resource);
 
 public:
-	bool update_options();
+	void update_options();
 	Vector<RunPresetOptions> get_options() const { return cached_options; }
 	void set_option(int p_option_idx);
 
 	void stop();
 
-	String get_name() const;
-	void set_name(const String &p_name);
+	String get_preset_name() const;
+	String get_custom_preset_name() const;
+	void set_preset_name(const String &p_name);
 
 	bool get_use_custom_icon() const;
 	void set_use_custom_icon(bool p_use);
@@ -155,18 +158,19 @@ public:
 	bool is_pinned() const;
 	void set_pinned(bool p_pinned);
 
+	Ref<InputEventKey> get_input_event() const;
+	void set_input_event(const Ref<InputEventKey> &p_input_event);
+
+	Ref<Shortcut> get_shortcut() const;
+
 	Ref<Texture2D> get_icon() const;
-
-	Dictionary to_dict() const;
-
-	static Ref<RunPreset> from_dict(const Dictionary &dict);
 
 protected:
 	static void _bind_methods();
 	void _validate_property(PropertyInfo &p_property) const;
 
 private:
-	String name;
+	String preset_name;
 	bool use_custom_icon = false;
 	Ref<Texture2D> custom_icon = nullptr;
 	String editor_icon = "";
@@ -185,5 +189,10 @@ private:
 	bool run_xr_enabled = false;
 	bool run_xr_enabled_use_current = false;
 	bool pinned = false;
+	Ref<InputEventKey> input_event;
+	Ref<Shortcut> shortcut;
 	Vector<RunPresetOptions> cached_options;
+
+public:
+	RunPreset();
 };

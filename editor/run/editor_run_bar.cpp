@@ -77,8 +77,11 @@ void EditorRunBar::_notification(int p_what) {
 				recovery_mode_show_dialog();
 			}
 
-			Dictionary current_preset_data = EditorSettings::get_singleton()->get_project_metadata("editor_run_bar", "current_preset", Dictionary());
-			current_preset = RunPreset::from_dict(current_preset_data);
+			Variant current_preset_data = EditorSettings::get_singleton()->get_project_metadata("editor_run_bar", "current_preset", "");
+			current_preset = current_preset_data;
+			if (!current_preset.is_valid()) {
+				current_preset = memnew(RunPreset);
+			}
 			if (DisplayServer::get_singleton()->has_feature(DisplayServerEnums::FEATURE_WINDOW_EMBEDDING)) {
 				int game_mode = EDITOR_GET("run/window_placement/game_embed_mode");
 				switch (game_mode) {
@@ -300,7 +303,7 @@ void EditorRunBar::_profiler_autostart_indicator_pressed() {
 }
 
 void EditorRunBar::_generate_popup_menu() {
-	main_play_menu_button->set_text(current_preset->get_name());
+	main_play_menu_button->set_text(current_preset->get_preset_name());
 
 	main_play_popup->clear();
 
@@ -392,7 +395,7 @@ void EditorRunBar::_generate_popup_menu() {
 	}
 
 	// Save the current present in project metadata, anytime there is a modification of it there should be a regeneration anyway.
-	EditorSettings::get_singleton()->set_project_metadata("editor_run_bar", "current_preset", current_preset->to_dict());
+	EditorSettings::get_singleton()->set_project_metadata("editor_run_bar", "current_preset", current_preset);
 }
 
 void EditorRunBar::_generate_presets_buttons() {
@@ -414,20 +417,22 @@ void EditorRunBar::_generate_presets_buttons() {
 
 void EditorRunBar::_update_presets_menu_button() {
 	presets_menu_button->get_popup()->clear(true);
-	for (Ref<RunPreset> preset : run_preset_manager_dialog->get_presets()) {
+	for (int i = 0; i < run_preset_manager_dialog->get_presets().size(); i++) {
+		Ref<RunPreset> preset = run_preset_manager_dialog->get_presets()[i];
 		if (preset->is_pinned()) {
 			continue;
 		}
 		Vector<RunPresetOptions> options = preset->get_options();
 		if (options.is_empty()) {
-			presets_menu_button->get_popup()->add_icon_item(preset->get_icon(), preset->get_name());
+			presets_menu_button->get_popup()->add_icon_item(preset->get_icon(), preset->get_preset_name(), i);
+			presets_menu_button->get_popup()->set_item_shortcut(-1, preset->get_shortcut(), true);
 		} else {
 			PopupMenu *submenu = memnew(PopupMenu);
 			for (const RunPresetOptions &option : options) {
 				submenu->add_icon_item(option.icon, option.name, option.id);
 			}
 			submenu->connect(SceneStringName(id_pressed), callable_mp(this, &EditorRunBar::_on_presets_submenu_item_pressed).bind(presets_menu_button->get_popup()->get_item_count()));
-			presets_menu_button->get_popup()->add_submenu_node_item(preset->get_name(), submenu);
+			presets_menu_button->get_popup()->add_submenu_node_item(preset->get_preset_name(), submenu);
 			presets_menu_button->get_popup()->set_item_icon(-1, preset->get_icon());
 		}
 	}

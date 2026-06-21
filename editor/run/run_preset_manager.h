@@ -42,9 +42,9 @@ class RunPresetManagerDialog : public AcceptDialog {
 private:
 	Vector<Ref<RunPreset>> presets;
 	ItemList *presets_list;
-	TypedArray<Dictionary> default_presets;
+	TypedArray<RunPreset> default_presets;
 	EditorInspector *preset_inspector;
-	Dictionary new_preset;
+	Ref<RunPreset> new_preset;
 
 	void _on_add_pressed();
 	void _on_remove_pressed();

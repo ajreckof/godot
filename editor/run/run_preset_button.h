@@ -52,6 +52,7 @@ protected:
 
 public:
 	void set_preset(const Ref<RunPreset> &p_preset);
+	void _update_preset();
 	Ref<RunPreset> get_preset() const { return preset; }
 	void show_popup();
 
