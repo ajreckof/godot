@@ -41,7 +41,7 @@
 #include "scene/scene_string_names.h"
 
 void RunPresetManagerDialog::_on_add_pressed() {
-	presets.push_back(RunPreset::from_dict(new_preset));
+	presets.push_back(new_preset->duplicate());
 
 	_update_preset_list();
 }
@@ -59,8 +59,8 @@ void RunPresetManagerDialog::_on_remove_pressed() {
 }
 
 void RunPresetManagerDialog::_on_restore_pressed() {
-	for (Dictionary preset : default_presets) {
-		presets.append(RunPreset::from_dict(preset));
+	for (Ref<RunPreset> preset : default_presets) {
+		presets.append(preset->duplicate());
 	}
 
 	_update_preset_list();
@@ -74,7 +74,7 @@ void RunPresetManagerDialog::_on_preset_selected(int p_index) {
 
 void RunPresetManagerDialog::_on_preset_property_edited() {
 	int presets_index = presets_list->get_selected_items()[0];
-	presets_list->set_item_text(presets_index, presets[presets_index]->get_name());
+	presets_list->set_item_text(presets_index, presets[presets_index]->get_preset_name());
 	presets_list->set_item_icon(presets_index, presets[presets_index]->get_icon());
 	save_presets();
 }
@@ -87,7 +87,7 @@ void RunPresetManagerDialog::_update_preset_list() {
 	}
 	presets_list->clear();
 	for (Ref<RunPreset> &preset : presets) {
-		presets_list->add_item(preset->get_name(), preset->get_icon());
+		presets_list->add_item(preset->get_preset_name(), preset->get_icon());
 		if (preset == selected_preset) {
 			presets_list->select(presets_list->get_item_count() - 1);
 		}
@@ -110,7 +110,7 @@ void RunPresetManagerDialog::_update_preset_list() {
 void RunPresetManagerDialog::save_presets() {
 	Array presets_array;
 	for (Ref<RunPreset> preset : presets) {
-		presets_array.append(preset->to_dict());
+		presets_array.append(preset);
 	};
 	EditorSettings::get_singleton()->set_project_metadata("editor_run_bar", "presets", presets_array);
 }
@@ -172,47 +172,48 @@ RunPresetManagerDialog::RunPresetManagerDialog() {
 	preset_inspector->set_theme_type_variation("TreeSecondary");
 	split->add_child(preset_inspector);
 
-	new_preset["name"] = TTR("New Preset");
-	new_preset["editor_icon"] = SNAME("Play");
-	new_preset["use_current_mode"] = true;
-	new_preset["use_current_destination"] = true;
-	new_preset["run_xr_enabled_use_current"] = true;
+	new_preset = memnew(RunPreset);
+	new_preset->set_name(TTR("New Preset"));
+	new_preset->set_editor_icon(SNAME("Play"));
+	new_preset->set_use_current_mode(true);
+	new_preset->set_use_current_destination(true);
+	new_preset->set_run_xr_enabled_use_current(true);
 
-	Dictionary current_scene_preset;
-	current_scene_preset["name"] = TTR("Run Current Scene");
-	current_scene_preset["mode"] = RunMode::RUN_CURRENT;
-	current_scene_preset["use_current_destination"] = true;
-	current_scene_preset["show_toolbar_use_current"] = true;
-	current_scene_preset["run_xr_enabled_use_current"] = true;
-	current_scene_preset["pinned"] = true;
-	current_scene_preset["editor_icon"] = SNAME("PlayScene");
+	Ref<RunPreset> current_scene_preset = memnew(RunPreset);
+	current_scene_preset->set_name(TTR("Run Current Scene"));
+	current_scene_preset->set_mode(RunMode::RUN_CURRENT);
+	current_scene_preset->set_use_current_destination(true);
+	current_scene_preset->set_show_toolbar_use_current(true);
+	current_scene_preset->set_run_xr_enabled_use_current(true);
+	current_scene_preset->set_pinned(true);
+	current_scene_preset->set_editor_icon(SNAME("PlayScene"));
 	default_presets.push_back(current_scene_preset);
 
-	Dictionary remote_run_preset;
-	remote_run_preset["name"] = TTR("Remote Deploy");
-	remote_run_preset["mode"] = RunMode::RUN_MAIN;
-	remote_run_preset["destination"] = DESTINATION_REMOTE;
-	remote_run_preset["select_remote_platform_id"] = true;
-	remote_run_preset["select_remote_device_id"] = true;
-	remote_run_preset["show_toolbar"] = false;
-	remote_run_preset["run_xr_enabled_use_current"] = true;
-	remote_run_preset["pinned"] = true;
-	remote_run_preset["editor_icon"] = SNAME("PlayRemote");
+	Ref<RunPreset> remote_run_preset = memnew(RunPreset);
+	remote_run_preset->set_name(TTR("Remote Deploy"));
+	remote_run_preset->set_mode(RunMode::RUN_MAIN);
+	remote_run_preset->set_destination(DESTINATION_REMOTE);
+	remote_run_preset->set_select_remote_platform_id(true);
+	remote_run_preset->set_select_remote_device_id(true);
+	remote_run_preset->set_show_toolbar(false);
+	remote_run_preset->set_run_xr_enabled_use_current(true);
+	remote_run_preset->set_pinned(true);
+	remote_run_preset->set_editor_icon(SNAME("PlayRemote"));
 	default_presets.push_back(remote_run_preset);
 
-	Dictionary main_scene_preset;
-	main_scene_preset["name"] = TTR("Run Custom Scene");
-	main_scene_preset["mode"] = RunMode::RUN_CUSTOM;
-	main_scene_preset["use_current_destination"] = true;
-	main_scene_preset["show_toolbar_use_current"] = true;
-	main_scene_preset["run_xr_enabled_use_current"] = true;
-	main_scene_preset["pinned"] = false;
-	main_scene_preset["editor_icon"] = SNAME("PlayCustom");
+	Ref<RunPreset> main_scene_preset = memnew(RunPreset);
+	main_scene_preset->set_name(TTR("Run Custom Scene"));
+	main_scene_preset->set_mode(RunMode::RUN_CUSTOM);
+	main_scene_preset->set_use_current_destination(true);
+	main_scene_preset->set_show_toolbar_use_current(true);
+	main_scene_preset->set_run_xr_enabled_use_current(true);
+	main_scene_preset->set_pinned(false);
+	main_scene_preset->set_editor_icon(SNAME("PlayCustom"));
 	default_presets.push_back(main_scene_preset);
 
-	TypedArray<Dictionary> presets_data = EditorSettings::get_singleton()->get_project_metadata("editor_run_bar", "presets", default_presets);
-	for (Dictionary preset_data : presets_data) {
-		presets.push_back(RunPreset::from_dict(preset_data));
+	Array presets_data = EditorSettings::get_singleton()->get_project_metadata("editor_run_bar", "presets", default_presets);
+	for (Ref<RunPreset> preset_data : presets_data) {
+		presets.push_back(preset_data);
 	}
 	_update_preset_list();
 }

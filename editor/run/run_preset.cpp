@@ -30,6 +30,7 @@
 
 #include "run_preset.h"
 
+#include "core/input/shortcut.h"
 #include "core/io/resource_loader.h"
 #include "core/object/class_db.h"
 #include "editor/editor_node.h"
@@ -37,8 +38,11 @@
 #include "editor/export/editor_export.h"
 #include "scene/resources/texture.h"
 
-bool RunPreset::update_options() {
+void RunPreset::update_options() {
 	cached_options.clear();
+	if (!EditorExport::get_singleton()) {
+		return;
+	}
 	if (get_destination() == RunDestination::DESTINATION_REMOTE && (get_remote_platform_id() == -1 || get_select_remote_platform_id())) {
 		for (int i = 0; i < EditorExport::get_singleton()->get_export_platform_count(); i++) {
 			Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(i);
@@ -67,8 +71,8 @@ bool RunPreset::update_options() {
 			});
 		}
 	}
-	emit_signal("changed");
-	return false;
+	emit_changed();
+	return;
 }
 
 void RunPreset::set_option(int p_option_id) {
@@ -90,9 +94,9 @@ void RunPreset::stop() {
 	}
 }
 
-String RunPreset::get_name() const {
-	if (!name.is_empty()) {
-		return name;
+String RunPreset::get_preset_name() const {
+	if (!preset_name.is_empty()) {
+		return preset_name;
 	}
 	if (get_destination() == DESTINATION_REMOTE) {
 		if (!get_select_remote_platform_id()) {
@@ -121,9 +125,12 @@ String RunPreset::get_name() const {
 	}
 	ERR_FAIL_V("unnamed preset");
 }
-void RunPreset::set_name(const String &p_name) {
-	name = p_name;
-	emit_signal("changed");
+String RunPreset::get_custom_preset_name() const {
+	return preset_name;
+}
+void RunPreset::set_preset_name(const String &p_name) {
+	preset_name = p_name;
+	emit_changed();
 }
 
 bool RunPreset::get_use_custom_icon() const {
@@ -131,7 +138,7 @@ bool RunPreset::get_use_custom_icon() const {
 }
 void RunPreset::set_use_custom_icon(bool p_use) {
 	use_custom_icon = p_use;
-	emit_signal("changed");
+	emit_changed();
 	notify_property_list_changed();
 }
 
@@ -143,7 +150,7 @@ String RunPreset::get_custom_icon_uid() const {
 }
 void RunPreset::set_custom_icon_uid(const String &p_uid) {
 	custom_icon = ResourceLoader::load(p_uid);
-	emit_signal("changed");
+	emit_changed();
 }
 
 String RunPreset::get_editor_icon() const {
@@ -151,7 +158,7 @@ String RunPreset::get_editor_icon() const {
 }
 void RunPreset::set_editor_icon(const String &p_icon) {
 	editor_icon = p_icon;
-	emit_signal("changed");
+	emit_changed();
 }
 
 RunMode RunPreset::get_mode() const {
@@ -159,7 +166,7 @@ RunMode RunPreset::get_mode() const {
 }
 void RunPreset::set_mode(RunMode p_mode) {
 	mode = p_mode;
-	emit_signal("changed");
+	emit_changed();
 }
 
 bool RunPreset::get_use_current_mode() const {
@@ -167,7 +174,7 @@ bool RunPreset::get_use_current_mode() const {
 }
 void RunPreset::set_use_current_mode(bool p_use) {
 	use_current_mode = p_use;
-	emit_signal("changed");
+	emit_changed();
 }
 
 int RunPreset::get_mode_as_int() const {
@@ -185,7 +192,7 @@ void RunPreset::set_mode_as_int(int p_mode) {
 		mode = static_cast<RunMode>(p_mode);
 		use_current_mode = false;
 	}
-	emit_signal("changed");
+	emit_changed();
 }
 
 String RunPreset::get_custom_scene_path() const {
@@ -194,7 +201,7 @@ String RunPreset::get_custom_scene_path() const {
 void RunPreset::set_custom_scene_path(const String &p_path) {
 	custom_scene_path = p_path;
 	select_custom_scene_path = custom_scene_path.is_empty();
-	emit_signal("changed");
+	emit_changed();
 }
 
 bool RunPreset::needs_selecting_custom_scene_path() const {
@@ -218,7 +225,7 @@ bool RunPreset::get_use_current_destination() const {
 }
 void RunPreset::set_use_current_destination(bool p_use) {
 	use_current_destination = p_use;
-	emit_signal("changed");
+	emit_changed();
 }
 
 int RunPreset::get_destination_as_int() const {
@@ -245,7 +252,7 @@ int RunPreset::get_remote_platform_id() const {
 }
 void RunPreset::set_remote_platform_id(int p_id) {
 	remote_platform_id = p_id;
-	emit_signal("changed");
+	emit_changed();
 }
 
 bool RunPreset::get_select_remote_platform_id() const {
@@ -253,7 +260,7 @@ bool RunPreset::get_select_remote_platform_id() const {
 }
 void RunPreset::set_select_remote_platform_id(bool p_select) {
 	select_remote_platform_id = p_select;
-	emit_signal("changed");
+	emit_changed();
 }
 
 int RunPreset::get_remote_platform_id_as_int() const {
@@ -279,7 +286,7 @@ int RunPreset::get_remote_device_id() const {
 }
 void RunPreset::set_remote_device_id(int p_id) {
 	remote_device_id = p_id;
-	emit_signal("changed");
+	emit_changed();
 }
 
 bool RunPreset::get_select_remote_device_id() const {
@@ -287,7 +294,7 @@ bool RunPreset::get_select_remote_device_id() const {
 }
 void RunPreset::set_select_remote_device_id(bool p_select) {
 	select_remote_device_id = p_select;
-	emit_signal("changed");
+	emit_changed();
 }
 
 int RunPreset::get_remote_device_id_as_int() const {
@@ -304,7 +311,7 @@ void RunPreset::set_remote_device_id_as_int(int p_id) {
 		remote_device_id = p_id;
 		select_remote_device_id = false;
 	}
-	emit_signal("changed");
+	emit_changed();
 	notify_property_list_changed();
 }
 
@@ -313,7 +320,7 @@ bool RunPreset::get_show_toolbar() const {
 }
 void RunPreset::set_show_toolbar(bool p_show) {
 	show_toolbar = p_show;
-	emit_signal("changed");
+	emit_changed();
 }
 
 bool RunPreset::get_show_toolbar_use_current() const {
@@ -321,7 +328,7 @@ bool RunPreset::get_show_toolbar_use_current() const {
 }
 void RunPreset::set_show_toolbar_use_current(bool p_use) {
 	show_toolbar_use_current = p_use;
-	emit_signal("changed");
+	emit_changed();
 }
 
 int RunPreset::get_show_toolbar_as_int() const {
@@ -338,7 +345,7 @@ void RunPreset::set_show_toolbar_as_int(int p_show) {
 		show_toolbar = bool(p_show);
 		show_toolbar_use_current = false;
 	}
-	emit_signal("changed");
+	emit_changed();
 }
 
 bool RunPreset::get_run_xr_enabled() const {
@@ -346,7 +353,7 @@ bool RunPreset::get_run_xr_enabled() const {
 }
 void RunPreset::set_run_xr_enabled(bool p_enabled) {
 	run_xr_enabled = p_enabled;
-	emit_signal("changed");
+	emit_changed();
 }
 
 bool RunPreset::get_run_xr_enabled_use_current() const {
@@ -354,7 +361,7 @@ bool RunPreset::get_run_xr_enabled_use_current() const {
 }
 void RunPreset::set_run_xr_enabled_use_current(bool p_use) {
 	run_xr_enabled_use_current = p_use;
-	emit_signal("changed");
+	emit_changed();
 }
 
 int RunPreset::get_run_xr_enabled_as_int() const {
@@ -371,7 +378,7 @@ void RunPreset::set_run_xr_enabled_as_int(int p_enabled) {
 		run_xr_enabled = bool(p_enabled);
 		run_xr_enabled_use_current = false;
 	}
-	emit_signal("changed");
+	emit_changed();
 }
 
 bool RunPreset::is_pinned() const {
@@ -379,7 +386,21 @@ bool RunPreset::is_pinned() const {
 }
 void RunPreset::set_pinned(bool p_pinned) {
 	pinned = p_pinned;
-	emit_signal("changed");
+	emit_changed();
+}
+
+Ref<InputEventKey> RunPreset::get_input_event() const {
+	return input_event;
+}
+
+void RunPreset::set_input_event(const Ref<InputEventKey> &p_input_event) {
+	input_event = p_input_event;
+	shortcut->set_events({ input_event });
+	emit_changed();
+}
+
+Ref<Shortcut> RunPreset::get_shortcut() const {
+	return shortcut;
 }
 
 Ref<Texture2D> RunPreset::get_icon() const {
@@ -392,67 +413,11 @@ Ref<Texture2D> RunPreset::get_icon() const {
 	return icon;
 }
 
-Dictionary RunPreset::to_dict() const {
-	Dictionary dict;
-	dict["name"] = name;
-	dict["pinned"] = pinned;
-
-	dict["use_custom_icon"] = use_custom_icon;
-	if (use_custom_icon) {
-		dict["custom_icon"] = custom_icon.is_valid() ? custom_icon->get_path() : "";
-	} else {
-		dict["editor_icon"] = editor_icon;
-	}
-
-	dict["mode"] = get_mode_as_int();
-	if (!use_current_mode) {
-		dict["custom_scene_path"] = custom_scene_path;
-	}
-	dict["destination"] = get_destination_as_int();
-	dict["show_toolbar"] = get_show_toolbar_as_int();
-	dict["run_xr_enabled"] = get_run_xr_enabled_as_int();
-	dict["remote_platform_id"] = get_remote_platform_id_as_int();
-	dict["remote_device_id"] = get_remote_device_id_as_int();
-	if (destination == DESTINATION_REMOTE && !select_custom_scene_path) {
-		// For backward compatibility, we need to save the remote platform id even if select_remote_platform_id is false, since before this property was added, the remote platform id was always saved.
-		dict["custom_scene_path"] = custom_scene_path;
-	}
-
-	return dict;
-}
-
-Ref<RunPreset> RunPreset::from_dict(const Dictionary &dict) {
-	Ref<RunPreset> preset = memnew(RunPreset);
-	if (dict.is_empty()) {
-		return preset;
-		// If the dictionary is empty, we return a default preset. This can happen if the metadata was not set yet, or if it was cleared because of an error during loading (e.g. due to incompatible data).
-	}
-	preset->name = dict.get("name", "");
-	preset->set_mode_as_int(dict.get("mode", 0));
-	if (preset->get_mode() == RUN_CUSTOM) {
-		preset->set_custom_scene_path(dict.get("custom_scene_path", ""));
-	}
-	preset->set_destination_as_int(dict.get("destination", 0));
-	preset->set_remote_platform_id_as_int(dict.get("remote_platform_id", -1));
-	preset->set_remote_device_id_as_int(dict.get("remote_device_id", -1));
-	preset->set_show_toolbar_as_int(dict.get("show_toolbar", true));
-	preset->set_run_xr_enabled_as_int(dict.get("run_xr_enabled", false));
-	preset->set_use_custom_icon(dict.get("use_custom_icon", false));
-	if (preset->get_use_custom_icon()) {
-		preset->custom_icon = ResourceLoader::load(dict.get("custom_icon", ""));
-	} else {
-		preset->set_editor_icon(dict.get("editor_icon", ""));
-	}
-	preset->set_pinned(bool(dict.get("pinned", false)));
-	return preset;
-}
-
 void RunPreset::_bind_methods() {
-	ADD_SIGNAL(MethodInfo("changed"));
-
-	ClassDB::bind_method(D_METHOD("get_name"), &RunPreset::get_name);
-	ClassDB::bind_method(D_METHOD("set_name", "name"), &RunPreset::set_name);
-	ADD_PROPERTY(PropertyInfo(Variant::STRING, "name"), "set_name", "get_name");
+	ClassDB::bind_method(D_METHOD("get_preset_name"), &RunPreset::get_preset_name);
+	ClassDB::bind_method(D_METHOD("get_custom_preset_name"), &RunPreset::get_custom_preset_name);
+	ClassDB::bind_method(D_METHOD("set_preset_name", "name"), &RunPreset::set_preset_name);
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "preset_name"), "set_preset_name", "get_custom_preset_name");
 
 	ClassDB::bind_method(D_METHOD("get_use_custom_icon"), &RunPreset::get_use_custom_icon);
 	ClassDB::bind_method(D_METHOD("set_use_custom_icon", "use"), &RunPreset::set_use_custom_icon);
@@ -497,6 +462,10 @@ void RunPreset::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_pinned"), &RunPreset::is_pinned);
 	ClassDB::bind_method(D_METHOD("set_pinned", "pinned"), &RunPreset::set_pinned);
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "pinned"), "set_pinned", "is_pinned");
+
+	ClassDB::bind_method(D_METHOD("get_input_event_shortcut"), &RunPreset::get_input_event);
+	ClassDB::bind_method(D_METHOD("set_input_event_shortcut", "input_event"), &RunPreset::set_input_event);
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "shortcut", PROPERTY_HINT_RESOURCE_TYPE, "InputEvent"), "set_input_event_shortcut", "get_input_event_shortcut");
 }
 
 void RunPreset::_validate_property(PropertyInfo &p_property) const {
@@ -534,5 +503,11 @@ void RunPreset::_validate_property(PropertyInfo &p_property) const {
 		} else {
 			p_property.usage &= ~PROPERTY_USAGE_EDITOR;
 		}
+	} else if (p_property.name == "Resource" || p_property.name.begins_with("resource_")) {
+		p_property.usage &= ~PROPERTY_USAGE_EDITOR;
 	}
+}
+
+RunPreset::RunPreset() {
+	shortcut = memnew(Shortcut);
 }
