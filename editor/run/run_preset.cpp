@@ -149,7 +149,11 @@ String RunPreset::get_custom_icon_uid() const {
 	return ResourceUID::path_to_uid(custom_icon->get_path());
 }
 void RunPreset::set_custom_icon_uid(const String &p_uid) {
-	custom_icon = ResourceLoader::load(p_uid);
+	if (p_uid.is_empty()) {
+		custom_icon = nullptr;
+	} else {
+		custom_icon = ResourceLoader::load(p_uid);
+	}
 	emit_changed();
 }
 
