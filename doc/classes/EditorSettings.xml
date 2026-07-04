@@ -280,6 +280,9 @@
 		<member name="debugger/remote_scene_tree_refresh_interval" type="float" setter="" getter="">
 			The refresh interval for the remote scene tree (in seconds). Lower values are more reactive, but may cause stuttering while the project is running from the editor and the [b]Remote[/b] scene tree is selected in the Scene tree dock.
 		</member>
+		<member name="debugger/max_sessions" type="int" setter="" getter="">
+			The maximum number of instance that can connect to the debugger simultaneously.
+		</member>
 		<member name="docks/filesystem/always_show_folders" type="bool" setter="" getter="">
 			If [code]true[/code], displays folders in the FileSystem dock's bottom pane when split mode is enabled. If [code]false[/code], only files will be displayed in the bottom pane. Split mode can be toggled by pressing the icon next to the [code]res://[/code] folder path.
 			[b]Note:[/b] This setting has no effect when split mode is disabled (which is the default).

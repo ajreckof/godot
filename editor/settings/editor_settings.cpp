@@ -1174,6 +1174,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	EDITOR_SETTING(Variant::FLOAT, PROPERTY_HINT_RANGE, "debugger/remote_scene_tree_refresh_interval", 1.0, "0.1,10,0.01,or_greater")
 	EDITOR_SETTING(Variant::FLOAT, PROPERTY_HINT_RANGE, "debugger/remote_inspect_refresh_interval", 0.2, "0.02,10,0.01,or_greater")
 	EDITOR_SETTING_BASIC(Variant::BOOL, PROPERTY_HINT_NONE, "debugger/profile_native_calls", false, "")
+	EDITOR_SETTING(Variant::INT, PROPERTY_HINT_RANGE, "debugger/max_sessions", 4, "1,100,1")
 
 	// Version control (VersionControlEditorPlugin)
 	_initial_set("version_control/username", "", true);

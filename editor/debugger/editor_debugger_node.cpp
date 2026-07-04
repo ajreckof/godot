@@ -408,6 +408,7 @@ void EditorDebuggerNode::_notification(int p_what) {
 			// Take connections.
 			if (server->is_connection_available()) {
 				ScriptEditorDebugger *debugger = nullptr;
+				int max_debugger_sessions = int(EDITOR_GET("debugger/max_sessions"));
 				_for_all(tabs, [&](ScriptEditorDebugger *dbg) {
 					if (debugger || dbg->is_session_active()) {
 						return;
@@ -415,7 +416,7 @@ void EditorDebuggerNode::_notification(int p_what) {
 					debugger = dbg;
 				});
 				if (debugger == nullptr) {
-					if (tabs->get_tab_count() <= 4) { // Max 4 debugging sessions active.
+					if (tabs->get_tab_count() < max_debugger_sessions) {
 						debugger = _add_debugger();
 					} else {
 						// We already have too many sessions, disconnecting new clients to prevent them from hanging.

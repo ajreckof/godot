@@ -35,6 +35,7 @@
 #include "core/templates/safe_refcount.h"
 #include "editor/editor_data.h"
 #include "editor/plugins/editor_plugin.h"
+#include "editor/run/run_instances_dialog.h"
 #include "editor/settings/editor_folding.h"
 #include "servers/display/display_server_enums.h"
 
@@ -728,7 +729,8 @@ private:
 
 protected:
 	friend class FileSystemDock;
-
+	friend class RunInstancesDialog;
+	
 	static void _bind_methods();
 	void _notification(int p_what);
 

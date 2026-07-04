@@ -34,6 +34,7 @@
 #include "core/object/callable_mp.h"
 #include "core/os/os.h"
 #include "editor/settings/editor_settings.h"
+#include "editor/settings/editor_settings_dialog.h"
 #include "editor/themes/editor_scale.h"
 #include "scene/gui/check_box.h"
 #include "scene/gui/grid_container.h"
@@ -44,6 +45,7 @@
 #include "scene/gui/separator.h"
 #include "scene/gui/spin_box.h"
 #include "scene/gui/tree.h"
+#include "scene/gui/link_button.h"
 #include "scene/main/timer.h"
 
 void RunInstancesDialog::_fetch_main_args() {
@@ -78,6 +80,10 @@ void RunInstancesDialog::_refresh_argument_count() {
 		_create_instance(instance, instance_data, i + 1);
 		instances_write[i] = instance;
 	}
+
+	debug_instance_warning->set_text(vformat("Warning: only the first %d instances will be linked to the debug.", int(EDITOR_GET("debugger/max_sessions"))));
+	debug_instance_warning->set_visible(instances_data.size() > int(EDITOR_GET("debugger/max_sessions")));
+	debug_instance_link->set_visible(instances_data.size() > int(EDITOR_GET("debugger/max_sessions")));
 }
 
 void RunInstancesDialog::_create_instance(InstanceData &p_instance, const Dictionary &p_data, int p_idx) {
@@ -295,6 +301,15 @@ void RunInstancesDialog::apply_custom_features(int p_instance_idx) {
 	OS::get_singleton()->set_environment("GODOT_EDITOR_CUSTOM_FEATURES", String(",").join(stripped_features));
 }
 
+void RunInstancesDialog::open_editor_settings_dialog() {
+	hide();
+	
+	EditorSettingsDialog *ed_settings = EditorNode::get_singleton()->editor_settings_dialog;
+	ed_settings->set_advanced_mode_enabled(true);
+	ed_settings->popup_edit_settings();
+	ed_settings->set_current_section("debugger");
+}
+
 RunInstancesDialog::RunInstancesDialog() {
 	singleton = this;
 	set_title(TTR("Run Instances"));
@@ -366,6 +381,16 @@ RunInstancesDialog::RunInstancesDialog() {
 	instance_count->set_max(20);
 	instance_count->set_value(EditorSettings::get_singleton()->get_project_metadata("debug_options", "run_instance_count", stored_data.size()));
 	instance_count->set_accessibility_name(TTRC("Number of Instances"));
+
+	debug_instance_warning = memnew(Label);
+	debug_instance_warning->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_CENTER);
+	EditorSettings::get_singleton()->connect("settings_changed", callable_mp(this, &RunInstancesDialog::_refresh_argument_count));
+	main_vb->add_child(debug_instance_warning);
+
+	debug_instance_link = memnew(LinkButton);
+	debug_instance_link->set_text("See debugger/max_sessions in Editor Settings.");
+	debug_instance_link->connect(SceneStringName(pressed), callable_mp(this, &RunInstancesDialog::open_editor_settings_dialog));
+	main_vb->add_child(debug_instance_link);
 
 	instance_hb->add_child(instance_count);
 	instance_count->connect(SceneStringName(value_changed), callable_mp(this, &RunInstancesDialog::_start_instance_timer).unbind(1));

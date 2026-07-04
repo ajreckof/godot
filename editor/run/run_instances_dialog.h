@@ -30,6 +30,8 @@
 
 #pragma once
 
+#include "editor/editor_node.h"
+#include "editor/settings/editor_settings_dialog.h"
 #include "scene/gui/dialogs.h"
 
 class CheckBox;
@@ -39,6 +41,8 @@ class Timer;
 class Tree;
 class TreeItem;
 class PopupMenu;
+class Label;
+class LinkButton;
 
 class RunInstancesDialog : public AcceptDialog {
 	GDCLASS(RunInstancesDialog, AcceptDialog);
@@ -79,6 +83,8 @@ class RunInstancesDialog : public AcceptDialog {
 	CheckBox *enable_multiple_instances_checkbox = nullptr;
 	Tree *instance_tree = nullptr;
 	PopupMenu *popup_menu = nullptr;
+	Label *debug_instance_warning = nullptr;
+	LinkButton *debug_instance_link = nullptr;
 
 	void _fetch_main_args();
 	// These 2 methods are necessary due to callable_mp() not supporting default arguments.
@@ -93,6 +99,7 @@ class RunInstancesDialog : public AcceptDialog {
 	Vector<String> _split_cmdline_args(const String &p_arg_string) const;
 	void _instance_menu_id_pressed(int p_option);
 	void _instance_tree_rmb(const Vector2 &p_pos, MouseButton p_button);
+	void open_editor_settings_dialog();
 
 public:
 	void popup_dialog();
