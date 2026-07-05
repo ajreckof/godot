@@ -135,6 +135,7 @@ void EditorRunBar::_notification(int p_what) {
 			}
 
 			_update_play_buttons();
+
 			profiler_autostart_indicator->set_button_icon(get_editor_theme_icon(SNAME("ProfilerAutostartWarning")));
 			pause_button->set_button_icon(get_editor_theme_icon(SNAME("Pause")));
 			stop_button->set_button_icon(get_editor_theme_icon(SNAME("Stop")));
@@ -174,7 +175,8 @@ void EditorRunBar::_update_play_buttons() {
 	}
 
 	_reset_play_buttons();
-	if (!is_playing() || current_preset != running_preset) {
+	_generate_popup_menu();
+	if (!is_playing()) {
 		return;
 	}
 
@@ -303,42 +305,55 @@ void EditorRunBar::_profiler_autostart_indicator_pressed() {
 }
 
 void EditorRunBar::_generate_popup_menu() {
-	main_play_menu_button->set_text(current_preset->get_preset_name());
-
+	Ref<RunPreset> preset;
 	main_play_popup->clear();
+	if (running_preset.is_valid()) {
+		preset = running_preset;
+	} else {
+		preset = current_preset;
+	}
+	ERR_FAIL_COND_MSG(!preset.is_valid(), "No valid preset to generate the popup menu for.");
+
+	if (preset != current_preset) {
+		main_play_menu_button->set_text(TTR("Running: ") + preset->get_preset_name());
+		main_play_popup->add_item(TTR("Override current preset with running preset"), PLAY_POPUP_RUNNING_PRESET_OVERRIDE);
+		main_play_popup->set_item_tooltip(-1, TTR("Currently running preset is different from the current preset. To edit running preset, override the current preset with the running preset first. Doing so will lose any value set in the current preset."));
+	} else {
+		main_play_menu_button->set_text(preset->get_preset_name());
+	}
 
 	main_play_popup->add_separator(TTR("Run Scene"), PLAY_POPUP_RUN_SCENE_SEPARATOR);
 
 	main_play_popup->add_radio_check_item(TTR("Main Scene"), PLAY_POPUP_RUN_MAIN);
-	main_play_popup->set_item_checked(-1, current_preset->get_mode() == RunMode::RUN_MAIN);
+	main_play_popup->set_item_checked(-1, preset->get_mode() == RunMode::RUN_MAIN);
 
 	main_play_popup->add_radio_check_item(TTR("Current Scene"), PLAY_POPUP_RUN_CURRENT);
-	main_play_popup->set_item_checked(-1, current_preset->get_mode() == RunMode::RUN_CURRENT);
-	main_play_popup->set_item_disabled(-1, current_preset->get_destination() == DESTINATION_REMOTE);
+	main_play_popup->set_item_checked(-1, preset->get_mode() == RunMode::RUN_CURRENT);
+	main_play_popup->set_item_disabled(-1, preset->get_destination() == DESTINATION_REMOTE);
 
 	for (int i = 0; i < last_runned_scenes.size(); i++) {
 		main_play_popup->add_radio_check_item(last_runned_scenes[i].get_file(), (i << PLAY_POPUP_EXTRA_INFO) + PLAY_POPUP_SELECTED_SCENE); // +1 to account for the "Select Scene..." item.
 		main_play_popup->set_item_tooltip(-1, last_runned_scenes[i]);
-		main_play_popup->set_item_checked(-1, current_preset->get_mode() == RunMode::RUN_CUSTOM && current_preset->get_custom_scene_path() == last_runned_scenes[i]);
-		main_play_popup->set_item_disabled(-1, current_preset->get_destination() == DESTINATION_REMOTE);
+		main_play_popup->set_item_checked(-1, preset->get_mode() == RunMode::RUN_CUSTOM && preset->get_custom_scene_path() == last_runned_scenes[i]);
+		main_play_popup->set_item_disabled(-1, preset->get_destination() == DESTINATION_REMOTE);
 	}
 	main_play_popup->add_item(TTR("Select Scene..."), PLAY_POPUP_RUN_SELECT_SCENE);
-	main_play_popup->set_item_disabled(-1, current_preset->get_destination() == DESTINATION_REMOTE);
+	main_play_popup->set_item_disabled(-1, preset->get_destination() == DESTINATION_REMOTE);
 
 	main_play_popup->add_separator(TTR("Run Destination"), PLAY_POPUP_RUN_DESTINATION_SEPARATOR);
 
 	main_play_popup->add_radio_check_item(TTR("Floating Window"), PLAY_POPUP_RUN_DESTINATION_FLOATING_WINDOW);
-	main_play_popup->set_item_checked(-1, current_preset->get_destination() == RunDestination::DESTINATION_FLOATING_WINDOW);
+	main_play_popup->set_item_checked(-1, preset->get_destination() == RunDestination::DESTINATION_FLOATING_WINDOW);
 
 	main_play_popup->add_radio_check_item(TTR("Embedded in Editor"), PLAY_POPUP_RUN_DESTINATION_EMBEDDED_IN_EDITOR);
-	main_play_popup->set_item_checked(-1, current_preset->get_destination() == RunDestination::DESTINATION_EMBEDDED_IN_EDITOR);
+	main_play_popup->set_item_checked(-1, preset->get_destination() == RunDestination::DESTINATION_EMBEDDED_IN_EDITOR);
 
 	int device_shortcut_id = 1;
 	LocalVector<int> platform_idx_with_options;
 	for (int i = 0; i < EditorExport::get_singleton()->get_export_platform_count(); i++) {
 		Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(i);
-		Ref<EditorExportPreset> preset = EditorExport::get_singleton()->get_runnable_preset_for_platform(eep);
-		if (preset.is_null()) {
+		Ref<EditorExportPreset> export_preset = EditorExport::get_singleton()->get_runnable_preset_for_platform(eep);
+		if (export_preset.is_null()) {
 			continue;
 		}
 		const int device_count = MIN(eep->get_options_count(), 9000);
@@ -347,7 +362,7 @@ void EditorRunBar::_generate_popup_menu() {
 			for (int j = 0; j < device_count; j++) {
 				if (eep->is_option_runnable(j)) {
 					main_play_popup->add_icon_radio_check_item(eep->get_option_icon(j), eep->get_option_label(j), (EditorExport::encode_platform_device_id(i, j) << PLAY_POPUP_EXTRA_INFO) + PLAY_POPUP_RUN_DESTINATION_REMOTE);
-					main_play_popup->set_item_checked(-1, current_preset->get_destination() == DESTINATION_REMOTE && current_preset->get_remote_platform_id() == i && current_preset->get_remote_device_id() == j);
+					main_play_popup->set_item_checked(-1, preset->get_destination() == DESTINATION_REMOTE && preset->get_remote_platform_id() == i && preset->get_remote_device_id() == j);
 
 					if (device_shortcut_id <= 4) {
 						// Assign shortcuts for the first 4 devices added in the list.
@@ -368,18 +383,18 @@ void EditorRunBar::_generate_popup_menu() {
 	main_play_popup->add_separator(TTRC("Run Options"), PLAY_POPUP_RUN_OPTIONS_SEPARATOR);
 
 	main_play_popup->add_check_item(TTRC("Show Toolbar"), PLAY_POPUP_RUN_OPTIONS_SHOW_TOOLBAR);
-	main_play_popup->set_item_disabled(-1, current_preset->get_destination() != DESTINATION_FLOATING_WINDOW);
-	main_play_popup->set_item_checked(-1, current_preset->get_show_toolbar());
+	main_play_popup->set_item_disabled(-1, preset->get_destination() != DESTINATION_FLOATING_WINDOW);
+	main_play_popup->set_item_checked(-1, preset->get_show_toolbar());
 #ifndef XR_DISABLED
 	if (XRServer::get_xr_mode() == XRServer::XRMODE_ON ||
 			(XRServer::get_xr_mode() == XRServer::XRMODE_DEFAULT && GLOBAL_GET("xr/openxr/enabled"))) {
 		main_play_popup->add_check_item(TTRC("XR Mode Enabled"), PLAY_POPUP_RUN_OPTIONS_RUN_XR_ENABLED);
-		main_play_popup->set_item_checked(-1, current_preset->get_run_xr_enabled());
+		main_play_popup->set_item_checked(-1, preset->get_run_xr_enabled());
 	}
 #endif
 	main_play_popup->add_check_item(TTRC("Movie Maker Mode Enabled"), PLAY_POPUP_RUN_OPTIONS_MOVIE_MAKER_ENABLED);
 	main_play_popup->set_item_checked(-1, is_movie_maker_enabled());
-	main_play_popup->set_item_disabled(-1, current_preset->get_destination() == DESTINATION_REMOTE);
+	main_play_popup->set_item_disabled(-1, preset->get_destination() == DESTINATION_REMOTE);
 	main_play_popup->add_item(TTRC("Movie Maker Options..."), PLAY_POPUP_RUN_OPTIONS_MOVIE_MAKER_OPTIONS);
 
 	for (int platform_idx : platform_idx_with_options) {
@@ -394,8 +409,14 @@ void EditorRunBar::_generate_popup_menu() {
 		main_play_popup->set_item_disabled(main_play_popup->get_item_index((EditorExport::encode_platform_device_id(platform_idx, 0) << PLAY_POPUP_EXTRA_INFO) + PLAY_POPUP_RUN_DESTINATION_REMOTE), false);
 	}
 
+	if (preset != current_preset) {
+		for (int i = 1; i < main_play_popup->get_item_count(); i++) {
+			main_play_popup->set_item_disabled(i, true);
+		}
+	}
+
 	// Save the current present in project metadata, anytime there is a modification of it there should be a regeneration anyway.
-	EditorSettings::get_singleton()->set_project_metadata("editor_run_bar", "current_preset", current_preset);
+	EditorSettings::get_singleton()->set_project_metadata("editor_run_bar", "preset", current_preset);
 }
 
 void EditorRunBar::_generate_presets_buttons() {
@@ -441,6 +462,11 @@ void EditorRunBar::_update_presets_menu_button() {
 
 void EditorRunBar::_on_popup_menu_id_pressed(int p_id) {
 	switch (p_id) {
+		case PLAY_POPUP_RUNNING_PRESET_OVERRIDE:
+			running_preset = running_preset->duplicate();
+			running_preset->update_from_current_preset(current_preset); // Copy back the current values that were lost in the duplicate.
+			current_preset = running_preset;
+			break;
 		case PLAY_POPUP_RUN_MAIN:
 			current_preset->set_mode(RunMode::RUN_MAIN);
 			break;
@@ -544,6 +570,7 @@ void EditorRunBar::play_preset(const Ref<RunPreset> p_preset) {
 				running_preset = p_preset;
 				emit_signal(SNAME("play_pressed"));
 				stop_button->set_disabled(!eep->is_option_stoppable(p_preset->get_remote_device_id()));
+				_generate_popup_menu();
 			}
 		}
 		return;
@@ -552,6 +579,7 @@ void EditorRunBar::play_preset(const Ref<RunPreset> p_preset) {
 		stop_playing();
 	}
 	running_preset = p_preset;
+	running_preset->update_from_current_preset(current_preset);
 
 	if (p_preset->get_mode() == RUN_CUSTOM && p_preset->needs_selecting_custom_scene_path() && p_preset->get_custom_scene_path().is_empty()) {
 		EditorNode::get_singleton()->get_quick_open_dialog()->popup_dialog(
@@ -641,6 +669,7 @@ void EditorRunBar::stop_playing() {
 	stop_button->set_pressed(false);
 	stop_button->set_disabled(true);
 	_reset_play_buttons();
+	_generate_popup_menu();
 
 	emit_signal(SNAME("stop_pressed"));
 }
@@ -870,6 +899,7 @@ EditorRunBar::EditorRunBar() {
 	main_play_popup->connect(SceneStringName(id_pressed), callable_mp(this, &EditorRunBar::_on_popup_menu_id_pressed));
 	main_play_popup->set_hide_on_item_selection(false);
 	main_play_popup->set_hide_on_checkable_item_selection(false);
+	main_play_popup->add_theme_constant_override("gutter_compact", 1);
 
 	// here need to modify the play button to run what is selected above
 	play_button = memnew(Button);

@@ -53,8 +53,6 @@ void RunPresetButton::_notification(int p_what) {
 		case NOTIFICATION_POSTINITIALIZE: {
 			connect("toggled", callable_mp(this, &RunPresetButton::_on_button_pressed).unbind(1));
 			popup->connect("id_pressed", callable_mp(this, &RunPresetButton::_on_popup_id_pressed));
-			EditorRunBar::get_singleton()->connect("play_pressed", callable_mp(this, &RunPresetButton::_update_button), CONNECT_DEFERRED);
-			EditorRunBar::get_singleton()->connect("stop_pressed", callable_mp(this, &RunPresetButton::_update_button));
 			break;
 		}
 		case NOTIFICATION_READY:
@@ -87,11 +85,7 @@ void RunPresetButton::_update_button() {
 	}
 	set_visible(preset->is_pinned());
 	set_pressed_no_signal(is_running());
-	if (is_running()) {
-		set_button_icon(get_theme_icon(SNAME("Reload"), EditorStringName(EditorIcons)));
-	} else {
-		set_button_icon(preset->get_icon());
-	}
+	set_button_icon(preset->get_icon());
 	set_tooltip_text(preset->get_preset_name());
 }
 

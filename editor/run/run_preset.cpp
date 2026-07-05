@@ -38,6 +38,26 @@
 #include "editor/export/editor_export.h"
 #include "scene/resources/texture.h"
 
+void RunPreset::update_from_current_preset(const Ref<RunPreset> &p_current_preset) {
+	if (p_current_preset.is_null()) {
+		return;
+	}
+	if (use_current_mode) {
+		mode = p_current_preset->get_mode();
+	}
+	if (use_current_destination) {
+		destination = p_current_preset->get_destination();
+	}
+	if (show_toolbar_use_current) {
+		show_toolbar = p_current_preset->get_show_toolbar();
+	}
+#ifndef XR_DISABLED
+	if (run_xr_enabled_use_current) {
+		run_xr_enabled = p_current_preset->get_run_xr_enabled();
+	}
+#endif //XR_DISABLED
+}
+
 void RunPreset::update_options() {
 	cached_options.clear();
 	if (!EditorExport::get_singleton()) {
