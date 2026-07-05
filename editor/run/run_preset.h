@@ -43,6 +43,7 @@ enum RunMode {
 };
 
 enum PlayPopupMenuItem {
+	PLAY_POPUP_RUNNING_PRESET_OVERRIDE,
 	PLAY_POPUP_RUN_SCENE_SEPARATOR,
 	PLAY_POPUP_RUN_MAIN,
 	PLAY_POPUP_RUN_CURRENT,
@@ -77,6 +78,8 @@ class RunPreset : public Resource {
 	GDCLASS(RunPreset, Resource);
 
 public:
+	void update_from_current_preset(const Ref<RunPreset> &p_current_preset);
+
 	void update_options();
 	Vector<RunPresetOptions> get_options() const { return cached_options; }
 	void set_option(int p_option_idx);
