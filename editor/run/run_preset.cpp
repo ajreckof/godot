@@ -56,6 +56,10 @@ void RunPreset::update_from_current_preset(const Ref<RunPreset> &p_current_prese
 		run_xr_enabled = p_current_preset->get_run_xr_enabled();
 	}
 #endif //XR_DISABLED
+
+	if (movie_maker_enabled_use_current) {
+		movie_maker_enabled = p_current_preset->get_movie_maker_enabled();
+	}
 }
 
 void RunPreset::update_options() {
@@ -67,11 +71,17 @@ void RunPreset::update_options() {
 		for (int i = 0; i < EditorExport::get_singleton()->get_export_platform_count(); i++) {
 			Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(i);
 			Ref<EditorExportPreset> preset = EditorExport::get_singleton()->get_runnable_preset_for_platform(eep);
+
 			if (preset.is_null()) {
 				continue;
 			}
+			cached_options.push_back(RunPresetOptions{
+					EditorExport::encode_platform_device_id(i, -1),
+					eep->get_name(),
+					eep->get_run_icon(),
+					true,
+			});
 			const int device_count = MIN(eep->get_options_count(), 9000);
-			String error;
 			for (int j = 0; j < device_count; j++) {
 				cached_options.push_back(RunPresetOptions{
 						EditorExport::get_singleton()->encode_platform_device_id(i, j),
@@ -413,6 +423,41 @@ void RunPreset::set_pinned(bool p_pinned) {
 	emit_changed();
 }
 
+bool RunPreset::get_movie_maker_enabled() const {
+	return movie_maker_enabled;
+}
+
+void RunPreset::set_movie_maker_enabled(bool p_enabled) {
+	movie_maker_enabled = p_enabled;
+	emit_changed();
+}
+
+bool RunPreset::get_movie_maker_enabled_use_current() const {
+	return movie_maker_enabled_use_current;
+}
+
+void RunPreset::set_movie_maker_enabled_use_current(bool p_use) {
+	movie_maker_enabled_use_current = p_use;
+	emit_changed();
+}
+
+int RunPreset::get_movie_maker_enabled_as_int() const {
+	if (movie_maker_enabled_use_current) {
+		return -1;
+	}
+	return static_cast<int>(movie_maker_enabled);
+}
+
+void RunPreset::set_movie_maker_enabled_as_int(int p_enabled) {
+	if (p_enabled == -1) {
+		movie_maker_enabled_use_current = true;
+	} else {
+		movie_maker_enabled = bool(p_enabled);
+		movie_maker_enabled_use_current = false;
+	}
+	emit_changed();
+}
+
 Ref<InputEventKey> RunPreset::get_input_event() const {
 	return input_event;
 }
@@ -457,7 +502,7 @@ void RunPreset::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_mode"), &RunPreset::get_mode_as_int);
 	ClassDB::bind_method(D_METHOD("set_mode", "mode"), &RunPreset::set_mode_as_int);
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "mode", PROPERTY_HINT_ENUM, "Use Current : -1, Main Scene, Current Scene, Custom Scene"), "set_mode", "get_mode");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "selected_scene", PROPERTY_HINT_ENUM, "Use Current : -1, Main Scene, Current Scene, Custom Scene"), "set_mode", "get_mode");
 
 	ClassDB::bind_method(D_METHOD("get_custom_scene_path"), &RunPreset::get_custom_scene_path);
 	ClassDB::bind_method(D_METHOD("set_custom_scene_path", "path"), &RunPreset::set_custom_scene_path);
@@ -487,6 +532,10 @@ void RunPreset::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_pinned", "pinned"), &RunPreset::set_pinned);
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "pinned"), "set_pinned", "is_pinned");
 
+	ClassDB::bind_method(D_METHOD("get_movie_maker_enabled"), &RunPreset::get_movie_maker_enabled_as_int);
+	ClassDB::bind_method(D_METHOD("set_movie_maker_enabled", "enabled"), &RunPreset::set_movie_maker_enabled_as_int);
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "movie_maker", PROPERTY_HINT_ENUM, "Use Current : -1, OFF, ON"), "set_movie_maker_enabled", "get_movie_maker_enabled");
+
 	ClassDB::bind_method(D_METHOD("get_input_event_shortcut"), &RunPreset::get_input_event);
 	ClassDB::bind_method(D_METHOD("set_input_event_shortcut", "input_event"), &RunPreset::set_input_event);
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "shortcut", PROPERTY_HINT_RESOURCE_TYPE, "InputEvent"), "set_input_event_shortcut", "get_input_event_shortcut");
@@ -499,7 +548,7 @@ void RunPreset::_validate_property(PropertyInfo &p_property) const {
 		} else {
 			p_property.usage |= PROPERTY_USAGE_EDITOR;
 		}
-	} else if (p_property.name == "custom_icon_uid") {
+	} else if (p_property.name == "custom_icon") {
 		if (use_custom_icon) {
 			p_property.usage |= PROPERTY_USAGE_EDITOR;
 		} else {

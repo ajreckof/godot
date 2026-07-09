@@ -173,14 +173,14 @@ RunPresetManagerDialog::RunPresetManagerDialog() {
 	split->add_child(preset_inspector);
 
 	new_preset = memnew(RunPreset);
-	new_preset->set_name(TTR("New Preset"));
+	new_preset->set_preset_name(TTR("New Preset"));
 	new_preset->set_editor_icon(SNAME("Play"));
 	new_preset->set_use_current_mode(true);
 	new_preset->set_use_current_destination(true);
 	new_preset->set_run_xr_enabled_use_current(true);
 
 	Ref<RunPreset> current_scene_preset = memnew(RunPreset);
-	current_scene_preset->set_name(TTR("Run Current Scene"));
+	current_scene_preset->set_preset_name(TTR("Run Current Scene"));
 	current_scene_preset->set_mode(RunMode::RUN_CURRENT);
 	current_scene_preset->set_use_current_destination(true);
 	current_scene_preset->set_show_toolbar_use_current(true);
@@ -190,7 +190,7 @@ RunPresetManagerDialog::RunPresetManagerDialog() {
 	default_presets.push_back(current_scene_preset);
 
 	Ref<RunPreset> remote_run_preset = memnew(RunPreset);
-	remote_run_preset->set_name(TTR("Remote Deploy"));
+	remote_run_preset->set_preset_name(TTR("Remote Deploy"));
 	remote_run_preset->set_mode(RunMode::RUN_MAIN);
 	remote_run_preset->set_destination(DESTINATION_REMOTE);
 	remote_run_preset->set_select_remote_platform_id(true);
@@ -202,7 +202,7 @@ RunPresetManagerDialog::RunPresetManagerDialog() {
 	default_presets.push_back(remote_run_preset);
 
 	Ref<RunPreset> main_scene_preset = memnew(RunPreset);
-	main_scene_preset->set_name(TTR("Run Custom Scene"));
+	main_scene_preset->set_preset_name(TTR("Run Custom Scene"));
 	main_scene_preset->set_mode(RunMode::RUN_CUSTOM);
 	main_scene_preset->set_use_current_destination(true);
 	main_scene_preset->set_show_toolbar_use_current(true);
