@@ -1738,6 +1738,9 @@ void ThemeClassic::populate_editor_styles(const Ref<EditorTheme> &p_theme, Edito
 		p_theme->set_color("icon_hover_color", "RunBarButtonMovieMakerEnabled", Color(0, 0, 0, 0.9));
 		p_theme->set_color("icon_hover_pressed_color", "RunBarButtonMovieMakerEnabled", Color(0, 0, 0, 0.84));
 
+		p_theme->set_type_variation("SplitMainRunBar", "HBoxContainer");
+		p_theme->set_constant("separation", "SplitMainRunBar", 2 * EDSCALE);
+
 		// Bottom panel.
 		Ref<StyleBoxFlat> style_bottom_panel = p_config.content_panel_style->duplicate();
 		style_bottom_panel->set_border_width(SIDE_BOTTOM, 0);
@@ -2092,6 +2095,20 @@ void ThemeClassic::populate_editor_styles(const Ref<EditorTheme> &p_theme, Edito
 			style_button_group->set_bg_color(p_config.dark_color_1.lerp(p_config.mono_color, 0.15));
 
 			p_theme->set_stylebox(SceneStringName(panel), "PanelContainerButtonGroup", style_button_group);
+
+			p_theme->set_type_variation("PanelContainerButtonGroupLeft", "PanelContainerButtonGroup");
+			Ref<StyleBoxFlat> style_button_group_left = style_button_group->duplicate();
+			style_button_group_left->set_corner_radius(CORNER_TOP_RIGHT, 0);
+			style_button_group_left->set_corner_radius(CORNER_BOTTOM_RIGHT, 0);
+			style_button_group_left->set_content_margin(SIDE_RIGHT, 0);
+			p_theme->set_stylebox(SceneStringName(panel), "PanelContainerButtonGroupLeft", style_button_group_left);
+
+			p_theme->set_type_variation("PanelContainerButtonGroupRight", "PanelContainerButtonGroup");
+			Ref<StyleBoxFlat> style_button_group_right = style_button_group->duplicate();
+			style_button_group_right->set_corner_radius(CORNER_TOP_LEFT, 0);
+			style_button_group_right->set_corner_radius(CORNER_BOTTOM_LEFT, 0);
+			style_button_group_right->set_content_margin(SIDE_LEFT, 0);
+			p_theme->set_stylebox(SceneStringName(panel), "PanelContainerButtonGroupRight", style_button_group_right);
 		}
 
 		// TreeLineEdit.

@@ -71,8 +71,9 @@ struct RunPresetOptions {
 	int id;
 	String name;
 	Ref<Texture2D> icon;
+	bool is_separator = false;
 
-	RunPresetOptions(int p_id, const String &p_name, const Ref<Texture2D> &p_icon) : id(p_id), name(p_name), icon(p_icon) {}
+	RunPresetOptions(int p_id, const String &p_name, const Ref<Texture2D> &p_icon, bool p_is_separator = false) : id(p_id), name(p_name), icon(p_icon), is_separator(p_is_separator) {}
 };
 class RunPreset : public Resource {
 	GDCLASS(RunPreset, Resource);
@@ -83,6 +84,7 @@ public:
 	void update_options();
 	Vector<RunPresetOptions> get_options() const { return cached_options; }
 	void set_option(int p_option_idx);
+	bool has_options() const { return !cached_options.is_empty(); }
 
 	void stop();
 
@@ -161,6 +163,15 @@ public:
 	bool is_pinned() const;
 	void set_pinned(bool p_pinned);
 
+	bool get_movie_maker_enabled() const;
+	void set_movie_maker_enabled(bool p_enabled);
+
+	bool get_movie_maker_enabled_use_current() const;
+	void set_movie_maker_enabled_use_current(bool p_use);
+
+	int get_movie_maker_enabled_as_int() const;
+	void set_movie_maker_enabled_as_int(int p_enabled);
+
 	Ref<InputEventKey> get_input_event() const;
 	void set_input_event(const Ref<InputEventKey> &p_input_event);
 
@@ -183,15 +194,17 @@ private:
 	bool select_custom_scene_path;
 	RunDestination destination = RunDestination::DESTINATION_EMBEDDED_IN_EDITOR;
 	bool use_current_destination = false;
-	int remote_platform_id = -1;
+	int remote_platform_id = 0;
 	bool select_remote_platform_id = false;
-	int remote_device_id = -1;
+	int remote_device_id = 0;
 	bool select_remote_device_id = false;
 	bool show_toolbar = true;
 	bool show_toolbar_use_current = false;
 	bool run_xr_enabled = false;
 	bool run_xr_enabled_use_current = false;
 	bool pinned = false;
+	bool movie_maker_enabled = false;
+	bool movie_maker_enabled_use_current = false;
 	Ref<InputEventKey> input_event;
 	Ref<Shortcut> shortcut;
 	Vector<RunPresetOptions> cached_options;

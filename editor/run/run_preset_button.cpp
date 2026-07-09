@@ -38,9 +38,7 @@
 #include "servers/rendering/rendering_server.h"
 
 void RunPresetButton::_on_button_pressed() {
-	if (is_running()) {
-		EditorRunBar::get_singleton()->resume_running_preset();
-	} else if (preset->get_destination() == RunDestination::DESTINATION_REMOTE && (preset->get_remote_platform_id() == -1 || preset->get_remote_device_id() == -1 || preset->get_select_remote_platform_id() || preset->get_select_remote_device_id())) {
+	if (preset->has_options()) {
 		show_popup();
 	} else {
 		// Otherwise, start running immediately with the preset's settings.
@@ -51,8 +49,8 @@ void RunPresetButton::_on_button_pressed() {
 void RunPresetButton::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_POSTINITIALIZE: {
-			connect("toggled", callable_mp(this, &RunPresetButton::_on_button_pressed).unbind(1));
-			popup->connect("id_pressed", callable_mp(this, &RunPresetButton::_on_popup_id_pressed));
+			connect(SceneStringName(pressed), callable_mp(this, &RunPresetButton::_on_button_pressed));
+			popup->connect(SceneStringName(id_pressed), callable_mp(this, &RunPresetButton::_on_popup_id_pressed));
 			break;
 		}
 		case NOTIFICATION_READY:
@@ -119,6 +117,7 @@ void RunPresetButton::_update_popup() {
 	}
 	for (RunPresetOptions option : preset->get_options()) {
 		popup->add_icon_item(option.icon, option.name, option.id);
+		popup->set_item_as_separator(-1, option.is_separator);
 	}
 }
 
@@ -169,7 +168,6 @@ RunPresetButton::RunPresetButton() {
 	add_child(popup);
 	popup->hide();
 
-	set_toggle_mode(true);
 	set_theme_type_variation(SceneStringName(FlatButton));
 	set_process(true);
 }

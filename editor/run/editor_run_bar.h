@@ -52,7 +52,6 @@ class EditorRunBar : public MarginContainer {
 
 	PanelContainer *main_panel = nullptr;
 	HBoxContainer *main_hbox = nullptr;
-	HBoxContainer *main_play_hbox = nullptr;
 	HBoxContainer *preset_hbox = nullptr;
 	MenuButton *main_play_menu_button = nullptr;
 	PopupMenu *main_play_popup = nullptr;
@@ -105,11 +104,14 @@ class EditorRunBar : public MarginContainer {
 	void _generate_popup_menu();
 	void _generate_presets_buttons();
 	void _update_presets_menu_button();
+	void add_preset_to_presets_menu_button(Ref<RunPreset> p_preset);
 	void _on_popup_menu_id_pressed(int p_id);
+	void _on_popup_menu_hide();
 	void _save_current_preset();
 
 	void _selected_scene(const String p_scene_path);
 	void _selected_running_scene(const String p_scene_path);
+	void _update_game_view_destination();
 
 private:
 	static Vector<String> _get_xr_mode_play_args(bool p_xr_enabled);

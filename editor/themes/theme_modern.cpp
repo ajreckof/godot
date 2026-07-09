@@ -1773,6 +1773,9 @@ void ThemeModern::populate_editor_styles(const Ref<EditorTheme> &p_theme, Editor
 		p_theme->set_stylebox(SceneStringName(pressed), "RunBarButton", p_config.base_empty_wide_style);
 		p_theme->set_stylebox(SceneStringName(hover), "RunBarButton", run_bar_hover);
 
+		p_theme->set_type_variation("SplitMainRunBar", "HBoxContainer");
+		p_theme->set_constant("separation", "SplitMainRunBar", 2 * EDSCALE);
+
 		// Needs to present even if unused.
 		p_theme->set_type_variation("RunBarButtonMovieMakerDisabled", "RunBarButton");
 
@@ -2201,6 +2204,20 @@ void ThemeModern::populate_editor_styles(const Ref<EditorTheme> &p_theme, Editor
 			style_button_group->set_bg_color(p_config.surface_lower_color.lerp(p_config.mono_color_inv, 0.15).lightened(0.02));
 
 			p_theme->set_stylebox(SceneStringName(panel), "PanelContainerButtonGroup", style_button_group);
+
+			p_theme->set_type_variation("PanelContainerButtonGroupLeft", "PanelContainerButtonGroup");
+			Ref<StyleBoxFlat> style_button_group_left = style_button_group->duplicate();
+			style_button_group_left->set_corner_radius(CORNER_TOP_RIGHT, 0);
+			style_button_group_left->set_corner_radius(CORNER_BOTTOM_RIGHT, 0);
+			style_button_group_left->set_content_margin(SIDE_RIGHT, 0);
+			p_theme->set_stylebox(SceneStringName(panel), "PanelContainerButtonGroupLeft", style_button_group_left);
+
+			p_theme->set_type_variation("PanelContainerButtonGroupRight", "PanelContainerButtonGroup");
+			Ref<StyleBoxFlat> style_button_group_right = style_button_group->duplicate();
+			style_button_group_right->set_corner_radius(CORNER_TOP_LEFT, 0);
+			style_button_group_right->set_corner_radius(CORNER_BOTTOM_LEFT, 0);
+			style_button_group_right->set_content_margin(SIDE_LEFT, 0);
+			p_theme->set_stylebox(SceneStringName(panel), "PanelContainerButtonGroupRight", style_button_group_right);
 		}
 
 		// TreeLineEdit.
