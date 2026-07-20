@@ -350,6 +350,14 @@ void RunPreset::set_remote_device_id_as_int(int p_id) {
 }
 
 bool RunPreset::get_show_toolbar() const {
+	if (destination == RunDestination::DESTINATION_EMBEDDED_IN_EDITOR) {
+		return true;
+	}
+
+	if (destination == RunDestination::DESTINATION_REMOTE) {
+		return false;
+	}
+
 	return show_toolbar;
 }
 void RunPreset::set_show_toolbar(bool p_show) {
@@ -369,7 +377,7 @@ int RunPreset::get_show_toolbar_as_int() const {
 	if (show_toolbar_use_current) {
 		return -1;
 	}
-	return static_cast<int>(show_toolbar);
+	return static_cast<int>(get_show_toolbar());
 }
 
 void RunPreset::set_show_toolbar_as_int(int p_show) {
