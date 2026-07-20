@@ -308,6 +308,10 @@ void EditorRunBar::_profiler_autostart_indicator_pressed() {
 }
 
 void EditorRunBar::_generate_popup_menu() {
+	if (current_preset.is_null()) {
+		return;
+	}
+
 	Ref<RunPreset> preset;
 	main_play_popup->clear();
 	if (running_preset.is_valid()) {
@@ -315,7 +319,6 @@ void EditorRunBar::_generate_popup_menu() {
 	} else {
 		preset = current_preset;
 	}
-	ERR_FAIL_COND_MSG(!preset.is_valid(), "No valid preset to generate the popup menu for.");
 
 	if (preset != current_preset) {
 		main_play_menu_button->set_text(TTR("Running: ") + preset->get_preset_name());
@@ -487,7 +490,6 @@ void EditorRunBar::_on_popup_menu_id_pressed(int p_id) {
 			break;
 		case PLAY_POPUP_RUN_DESTINATION_EMBEDDED_IN_EDITOR:
 			current_preset->set_destination(RunDestination::DESTINATION_EMBEDDED_IN_EDITOR);
-			current_preset->set_show_toolbar(true);
 			_update_game_view_destination();
 			break;
 		case PLAY_POPUP_RUN_OPTIONS_SHOW_TOOLBAR:
@@ -514,7 +516,6 @@ void EditorRunBar::_on_popup_menu_id_pressed(int p_id) {
 				int device_idx = EditorExport::decode_device_from_id(p_id >> PLAY_POPUP_EXTRA_INFO);
 				if (EditorExport::get_singleton()->get_export_platform(platform_idx)->is_option_runnable(device_idx)) {
 					current_preset->set_destination(RunDestination::DESTINATION_REMOTE);
-					current_preset->set_show_toolbar(false);
 					current_preset->set_mode(RunMode::RUN_MAIN); // Remote run only supports running the main scene for now, so switch to this mode if not already.
 					current_preset->set_remote_platform_id_as_int(platform_idx);
 					current_preset->set_remote_device_id_as_int(device_idx);
