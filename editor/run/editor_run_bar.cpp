@@ -194,7 +194,7 @@ void EditorRunBar::_on_presets_menu_item_pressed(int p_id) {
 		return;
 	} else if (p_id == presets.size()) {
 		// "Manage Presets..." is always the last item in the menu.
-		run_preset_manager_dialog->popup_centered_ratio(0.6);
+		run_preset_manager_dialog->popup_centered_clamped(Size2(900, 500) * EDSCALE, 0.7);
 		return;
 	}
 }
@@ -573,7 +573,11 @@ void EditorRunBar::recovery_mode_reload_project() {
 	EditorNode::get_singleton()->trigger_menu_option(EditorNode::PROJECT_RELOAD_CURRENT_PROJECT, false);
 }
 void EditorRunBar::play_current_preset() {
-	play_preset(current_preset);
+	if (running_preset.is_valid()) {
+		resume_running_preset();
+	} else {
+		play_preset(current_preset);
+	}
 }
 
 void EditorRunBar::play_main_scene(const Vector<String> &p_play_args) {
@@ -587,17 +591,11 @@ void EditorRunBar::play_custom_scene(const String &p_scene_path, const Vector<St
 
 void EditorRunBar::play_preset(const Ref<RunPreset> p_preset) {
 	if (p_preset->get_destination() == DESTINATION_REMOTE) {
-		Error err = start_run_native(p_preset->get_remote_platform_id(), p_preset->get_remote_device_id());
-		if (err == OK) {
-			Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(p_preset->get_remote_platform_id());
-			if (eep->is_option_runnable(p_preset->get_remote_device_id())) {
-				running_preset = p_preset;
-				emit_signal(SNAME("play_pressed"));
-				stop_button->set_disabled(!eep->is_option_stoppable(p_preset->get_remote_device_id()));
-				_generate_popup_menu();
-			}
+		Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(p_preset->get_remote_platform_id());
+		if (!eep->is_option_runnable(p_preset->get_remote_device_id())) {
+			start_run_native(p_preset->get_remote_platform_id(), p_preset->get_remote_device_id());
+			return;
 		}
-		return;
 	}
 	if (editor_run.get_status() == EditorRun::STATUS_PLAY) {
 		stop_playing();
@@ -605,7 +603,7 @@ void EditorRunBar::play_preset(const Ref<RunPreset> p_preset) {
 	running_preset = p_preset;
 	running_preset->update_from_current_preset(current_preset);
 
-	if (p_preset->get_mode() == RUN_CUSTOM && p_preset->needs_selecting_custom_scene_path() && p_preset->get_custom_scene_path().is_empty()) {
+	if (p_preset->get_mode() == RUN_CUSTOM && p_preset->needs_selecting_custom_scene_path()) {
 		EditorNode::get_singleton()->get_quick_open_dialog()->popup_dialog(
 				{ "PackedScene" },
 				callable_mp(this, &EditorRunBar::_selected_running_scene));
@@ -615,6 +613,17 @@ void EditorRunBar::play_preset(const Ref<RunPreset> p_preset) {
 }
 
 void EditorRunBar::resume_running_preset() {
+	if (running_preset->get_destination() == DESTINATION_REMOTE) {
+		Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(running_preset->get_remote_platform_id());
+		if (eep->is_option_runnable(running_preset->get_remote_device_id())) {
+			Error err = start_run_native(running_preset->get_remote_platform_id(), running_preset->get_remote_device_id());
+			if (err == OK) {
+				emit_signal(SNAME("play_pressed"));
+				_reset_play_buttons();
+			}
+			return;
+		}
+	}
 	String run_filename;
 	switch (running_preset->get_mode()) {
 		case RUN_CUSTOM: {
@@ -682,7 +691,6 @@ void EditorRunBar::stop_playing() {
 			Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(running_preset->get_remote_platform_id());
 			eep->stop();
 		}
-		running_preset->stop();
 		running_preset = nullptr;
 	}
 	editor_run.stop();

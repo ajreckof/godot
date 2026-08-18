@@ -112,18 +112,6 @@ void RunPreset::set_option(int p_option_id) {
 	set_remote_device_id(device_id);
 }
 
-void RunPreset::stop() {
-	if (select_remote_platform_id) {
-		remote_platform_id = -1;
-	}
-	if (select_remote_device_id) {
-		remote_device_id = -1;
-	}
-	if (mode == RunMode::RUN_CUSTOM && select_custom_scene_path) {
-		custom_scene_path = "";
-	}
-}
-
 String RunPreset::get_preset_name() const {
 	if (!preset_name.is_empty()) {
 		return preset_name;
@@ -522,19 +510,19 @@ void RunPreset::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_remote_platform_id"), &RunPreset::get_remote_platform_id_as_int);
 	ClassDB::bind_method(D_METHOD("set_remote_platform_id", "id"), &RunPreset::set_remote_platform_id_as_int);
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "remote_platform_id", PROPERTY_HINT_ENUM, "Choose On Play : -1"), "set_remote_platform_id", "get_remote_platform_id");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "remote_platform_id", PROPERTY_HINT_ENUM, "Choose on Play : -1"), "set_remote_platform_id", "get_remote_platform_id");
 
 	ClassDB::bind_method(D_METHOD("get_remote_device_id"), &RunPreset::get_remote_device_id_as_int);
 	ClassDB::bind_method(D_METHOD("set_remote_device_id", "id"), &RunPreset::set_remote_device_id_as_int);
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "remote_device_id", PROPERTY_HINT_ENUM, "Choose On Play : -1"), "set_remote_device_id", "get_remote_device_id");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "remote_device_id", PROPERTY_HINT_ENUM, "Choose on Play : -1"), "set_remote_device_id", "get_remote_device_id");
 
 	ClassDB::bind_method(D_METHOD("get_show_toolbar"), &RunPreset::get_show_toolbar_as_int);
 	ClassDB::bind_method(D_METHOD("set_show_toolbar", "show"), &RunPreset::set_show_toolbar_as_int);
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "show_toolbar", PROPERTY_HINT_ENUM, "Use Current : -1, OFF, ON"), "set_show_toolbar", "get_show_toolbar");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "show_toolbar", PROPERTY_HINT_ENUM, "Use Current : -1, Hidden, Shown"), "set_show_toolbar", "get_show_toolbar");
 
 	ClassDB::bind_method(D_METHOD("get_run_xr_enabled"), &RunPreset::get_run_xr_enabled_as_int);
 	ClassDB::bind_method(D_METHOD("set_run_xr_enabled", "enabled"), &RunPreset::set_run_xr_enabled_as_int);
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "run_xr_enabled", PROPERTY_HINT_ENUM, "Use Current : -1, OFF, ON"), "set_run_xr_enabled", "get_run_xr_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "run_xr_enabled", PROPERTY_HINT_ENUM, "Use Current : -1, Disabled, Enabled"), "set_run_xr_enabled", "get_run_xr_enabled");
 
 	ClassDB::bind_method(D_METHOD("is_pinned"), &RunPreset::is_pinned);
 	ClassDB::bind_method(D_METHOD("set_pinned", "pinned"), &RunPreset::set_pinned);
@@ -542,7 +530,7 @@ void RunPreset::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_movie_maker_enabled"), &RunPreset::get_movie_maker_enabled_as_int);
 	ClassDB::bind_method(D_METHOD("set_movie_maker_enabled", "enabled"), &RunPreset::set_movie_maker_enabled_as_int);
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "movie_maker", PROPERTY_HINT_ENUM, "Use Current : -1, OFF, ON"), "set_movie_maker_enabled", "get_movie_maker_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "movie_maker", PROPERTY_HINT_ENUM, "Use Current : -1, Disabled, Enabled"), "set_movie_maker_enabled", "get_movie_maker_enabled");
 
 	ClassDB::bind_method(D_METHOD("get_input_event_shortcut"), &RunPreset::get_input_event);
 	ClassDB::bind_method(D_METHOD("set_input_event_shortcut", "input_event"), &RunPreset::set_input_event);
@@ -564,7 +552,7 @@ void RunPreset::_validate_property(PropertyInfo &p_property) const {
 		}
 	} else if (p_property.name == "remote_platform_id") {
 		if (destination == DESTINATION_REMOTE) {
-			p_property.hint_string = "Choose On Play:-1";
+			p_property.hint_string = "Choose on Play:-1";
 			for (int i = 0; i < EditorExport::get_singleton()->get_export_platform_count(); i++) {
 				Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(i);
 				p_property.hint_string += "," + eep->get_name();
@@ -575,7 +563,7 @@ void RunPreset::_validate_property(PropertyInfo &p_property) const {
 		}
 	} else if (p_property.name == "remote_device_id") {
 		if (destination == DESTINATION_REMOTE && !select_remote_platform_id) {
-			p_property.hint_string = "Choose On Play:-1";
+			p_property.hint_string = "Choose on Play:-1";
 			Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(remote_platform_id);
 			for (int i = 0; i < eep->get_options_count(); i++) {
 				p_property.hint_string += "," + eep->get_option_label(i);

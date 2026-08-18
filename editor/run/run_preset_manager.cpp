@@ -35,6 +35,7 @@
 #include "editor/inspector/editor_inspector.h"
 #include "editor/run/run_preset.h"
 #include "editor/settings/editor_settings.h"
+#include "editor/themes/editor_scale.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/item_list.h"
 #include "scene/gui/split_container.h"
@@ -138,6 +139,7 @@ void RunPresetManagerDialog::_on_parent_theme_changed() {
 
 RunPresetManagerDialog::RunPresetManagerDialog() {
 	HSplitContainer *split = memnew(HSplitContainer);
+	split->set_custom_minimum_size(Size2(500, 240) * EDSCALE);
 	add_child(split);
 
 	VBoxContainer *vbox = memnew(VBoxContainer);
@@ -146,7 +148,7 @@ RunPresetManagerDialog::RunPresetManagerDialog() {
 	presets_list = memnew(ItemList);
 	vbox->add_child(presets_list);
 	presets_list->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	presets_list->set_theme_type_variation("TreeSecondary");
+	presets_list->set_theme_type_variation("ItemListSecondary");
 	presets_list->connect(SceneStringName(item_selected), callable_mp(this, &RunPresetManagerDialog::_on_preset_selected));
 
 	HBoxContainer *button_bar = memnew(HBoxContainer);
@@ -158,7 +160,7 @@ RunPresetManagerDialog::RunPresetManagerDialog() {
 	button_bar->add_child(add_button);
 
 	Button *restore_button = memnew(Button);
-	restore_button->set_text("Restore defaults");
+	restore_button->set_text("Restore Defaults");
 	restore_button->connect(SceneStringName(pressed), callable_mp(this, &RunPresetManagerDialog::_on_restore_pressed));
 	button_bar->add_child(restore_button);
 
@@ -186,6 +188,7 @@ RunPresetManagerDialog::RunPresetManagerDialog() {
 	current_scene_preset->set_show_toolbar_use_current(true);
 	current_scene_preset->set_run_xr_enabled_use_current(true);
 	current_scene_preset->set_pinned(true);
+	current_scene_preset->set_movie_maker_enabled_use_current(true);
 	current_scene_preset->set_editor_icon(SNAME("PlayScene"));
 	default_presets.push_back(current_scene_preset);
 
@@ -198,6 +201,7 @@ RunPresetManagerDialog::RunPresetManagerDialog() {
 	remote_run_preset->set_show_toolbar(false);
 	remote_run_preset->set_run_xr_enabled_use_current(true);
 	remote_run_preset->set_pinned(true);
+	remote_run_preset->set_movie_maker_enabled_use_current(true);
 	remote_run_preset->set_editor_icon(SNAME("PlayRemote"));
 	default_presets.push_back(remote_run_preset);
 
@@ -208,6 +212,7 @@ RunPresetManagerDialog::RunPresetManagerDialog() {
 	main_scene_preset->set_show_toolbar_use_current(true);
 	main_scene_preset->set_run_xr_enabled_use_current(true);
 	main_scene_preset->set_pinned(false);
+	main_scene_preset->set_movie_maker_enabled_use_current(true);
 	main_scene_preset->set_editor_icon(SNAME("PlayCustom"));
 	default_presets.push_back(main_scene_preset);
 

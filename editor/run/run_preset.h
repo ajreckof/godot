@@ -86,8 +86,6 @@ public:
 	void set_option(int p_option_idx);
 	bool has_options() const { return !cached_options.is_empty(); }
 
-	void stop();
-
 	String get_preset_name() const;
 	String get_custom_preset_name() const;
 	void set_preset_name(const String &p_name);
