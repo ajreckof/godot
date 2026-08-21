@@ -68,9 +68,10 @@ void RunPresetManagerDialog::_on_restore_pressed() {
 }
 
 void RunPresetManagerDialog::_on_preset_selected(int p_index) {
-	Ref<RunPreset> preset = presets[p_index];
-	preset_inspector->edit(preset.ptr());
+	presets_list->select(p_index);
+	preset_inspector->edit(presets[p_index].ptr());
 	preset_inspector->show();
+	info_message_vbox->hide();
 }
 
 void RunPresetManagerDialog::_on_preset_property_edited() {
@@ -94,14 +95,14 @@ void RunPresetManagerDialog::_update_preset_list() {
 		}
 	}
 	if (!presets_list->is_anything_selected()) {
-		if (presets.size() > selected_index) {
-			preset_inspector->edit(presets[selected_index].ptr());
-			presets_list->select(selected_index);
+		if (selected_index < presets.size()) {
+			_on_preset_selected(selected_index);
 		} else if (presets.size() > 0) {
-			preset_inspector->edit(presets[presets.size() - 1].ptr());
-			presets_list->select(presets.size() - 1);
+			_on_preset_selected(presets.size() - 1);
 		} else {
 			preset_inspector->edit(nullptr);
+			preset_inspector->hide();
+			info_message_vbox->show();
 		}
 	}
 	save_presets();
@@ -173,6 +174,30 @@ RunPresetManagerDialog::RunPresetManagerDialog() {
 	preset_inspector->connect(SNAME("property_edited"), callable_mp(this, &RunPresetManagerDialog::_on_preset_property_edited).unbind(1));
 	preset_inspector->set_theme_type_variation("TreeSecondary");
 	split->add_child(preset_inspector);
+
+	info_message_vbox = memnew(VBoxContainer);
+	split->add_child(info_message_vbox);
+	info_message_vbox->set_alignment(BoxContainer::AlignmentMode::ALIGNMENT_CENTER);
+	info_message_vbox->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	info_message_vbox->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	info_message_vbox->hide();
+
+	Label *info_message = memnew(Label);
+	info_message_vbox->add_child(info_message);
+	info_message->set_focus_mode(Control::FOCUS_ACCESSIBILITY);
+	info_message->set_text(TTRC("Add a preset to edit it."));
+	info_message->set_vertical_alignment(VERTICAL_ALIGNMENT_CENTER);
+	info_message->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_CENTER);
+	info_message->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
+	info_message->set_custom_minimum_size(Size2(100 * EDSCALE, 0));
+	info_message->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT, Control::PRESET_MODE_KEEP_SIZE, 8 * EDSCALE);
+
+	Button *add_animation_player = memnew(Button);
+	info_message_vbox->add_child(add_animation_player);
+	add_animation_player->set_text(TTRC("Add Preset"));
+	add_animation_player->set_tooltip_text(TTRC("Add a new preset."));
+	add_animation_player->set_h_size_flags(Control::SIZE_SHRINK_CENTER);
+	add_animation_player->connect(SceneStringName(pressed), callable_mp(this, &RunPresetManagerDialog::_on_add_pressed));
 
 	new_preset = memnew(RunPreset);
 	new_preset->set_preset_name(TTR("New Preset"));

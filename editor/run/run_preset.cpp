@@ -494,7 +494,7 @@ void RunPreset::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_editor_icon"), &RunPreset::get_editor_icon);
 	ClassDB::bind_method(D_METHOD("set_editor_icon", "icon"), &RunPreset::set_editor_icon);
-	ADD_PROPERTY(PropertyInfo(Variant::STRING, "editor_icon"), "set_editor_icon", "get_editor_icon");
+	ADD_PROPERTY(PropertyInfo(Variant::STRING_NAME, "editor_icon", PROPERTY_HINT_ENUM_SUGGESTION, ""), "set_editor_icon", "get_editor_icon");
 
 	ClassDB::bind_method(D_METHOD("get_mode"), &RunPreset::get_mode_as_int);
 	ClassDB::bind_method(D_METHOD("set_mode", "mode"), &RunPreset::set_mode_as_int);
@@ -543,6 +543,15 @@ void RunPreset::_validate_property(PropertyInfo &p_property) const {
 			p_property.usage &= ~PROPERTY_USAGE_EDITOR;
 		} else {
 			p_property.usage |= PROPERTY_USAGE_EDITOR;
+		}
+		List<StringName> icon_list;
+		EditorNode::get_singleton()->get_editor_theme()->get_icon_list(EditorStringName(EditorIcons), &icon_list);
+		p_property.hint_string = "";
+		for (const StringName &icon_name : icon_list) {
+			if (!p_property.hint_string.is_empty()) {
+				p_property.hint_string += ",";
+			}
+			p_property.hint_string += icon_name;
 		}
 	} else if (p_property.name == "custom_icon") {
 		if (use_custom_icon) {
