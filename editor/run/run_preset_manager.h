@@ -44,6 +44,7 @@ private:
 	ItemList *presets_list;
 	TypedArray<RunPreset> default_presets;
 	EditorInspector *preset_inspector;
+	VBoxContainer *info_message_vbox;
 	Ref<RunPreset> new_preset;
 
 	void _on_add_pressed();
