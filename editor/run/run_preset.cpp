@@ -75,13 +75,16 @@ void RunPreset::update_options() {
 			if (preset.is_null()) {
 				continue;
 			}
+			const int device_count = MIN(eep->get_options_count(), 9000);
+			if (device_count == 0) {
+				continue;
+			}
 			cached_options.push_back(RunPresetOptions{
 					EditorExport::encode_platform_device_id(i, -1),
 					eep->get_name(),
 					eep->get_run_icon(),
 					true,
 			});
-			const int device_count = MIN(eep->get_options_count(), 9000);
 			for (int j = 0; j < device_count; j++) {
 				cached_options.push_back(RunPresetOptions{
 						EditorExport::get_singleton()->encode_platform_device_id(i, j),
@@ -114,7 +117,7 @@ void RunPreset::set_option(int p_option_id) {
 
 String RunPreset::get_preset_name() const {
 	if (!preset_name.is_empty()) {
-		return preset_name;
+		return "Preset: " + preset_name;
 	}
 	if (get_destination() == DESTINATION_REMOTE) {
 		if (!get_select_remote_platform_id()) {
