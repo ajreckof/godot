@@ -351,6 +351,7 @@ public:
 	virtual String get_options_tooltip() const { return ""; }
 	virtual Ref<Texture2D> get_option_icon(int p_index) const;
 	virtual String get_option_label(int p_device) const { return ""; }
+	virtual String get_option_full_label(int p_device) const { return get_name() + ": " + get_option_label(p_device); }
 	virtual String get_option_tooltip(int p_device) const { return ""; }
 	virtual String get_device_architecture(int p_device) const { return ""; }
 

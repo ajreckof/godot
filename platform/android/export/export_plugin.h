@@ -236,6 +236,7 @@ public:
 	virtual String get_options_tooltip() const override;
 
 	virtual String get_option_label(int p_index) const override;
+	// virtual String get_option_full_label(int p_index) const override;
 
 	virtual String get_option_tooltip(int p_index) const override;
 

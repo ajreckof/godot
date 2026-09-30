@@ -38,28 +38,37 @@
 #include "editor/export/editor_export.h"
 #include "scene/resources/texture.h"
 
-void RunPreset::update_from_current_preset(const Ref<RunPreset> &p_current_preset) {
-	if (p_current_preset.is_null()) {
+void RunPreset::update_from_new_preset(const Ref<RunPreset> &p_new_preset) {
+	if (p_new_preset.is_null()) {
 		return;
 	}
-	if (use_current_mode) {
-		mode = p_current_preset->get_mode();
+	if (!p_new_preset->use_current_mode) {
+		mode = p_new_preset->get_mode();
 	}
-	if (use_current_destination) {
-		destination = p_current_preset->get_destination();
+	if (!p_new_preset->use_current_destination) {
+		destination = p_new_preset->get_destination();
 	}
-	if (show_toolbar_use_current) {
-		show_toolbar = p_current_preset->get_show_toolbar();
+	if (!p_new_preset->show_toolbar_use_current) {
+		show_toolbar = p_new_preset->get_show_toolbar();
 	}
 #ifndef XR_DISABLED
-	if (run_xr_enabled_use_current) {
-		run_xr_enabled = p_current_preset->get_run_xr_enabled();
+	if (!p_new_preset->run_xr_enabled_use_current) {
+		run_xr_enabled = p_new_preset->get_run_xr_enabled();
 	}
 #endif //XR_DISABLED
 
-	if (movie_maker_enabled_use_current) {
-		movie_maker_enabled = p_current_preset->get_movie_maker_enabled();
+	if (!p_new_preset->movie_maker_enabled_use_current) {
+		movie_maker_enabled = p_new_preset->get_movie_maker_enabled();
 	}
+
+	custom_icon = p_new_preset->custom_icon;
+	editor_icon = p_new_preset->editor_icon;
+	preset_name = p_new_preset->preset_name;
+	use_custom_icon = p_new_preset->use_custom_icon;
+	custom_scene_path = p_new_preset->custom_scene_path;
+	remote_platform_id = p_new_preset->remote_platform_id;
+	remote_device_id = p_new_preset->remote_device_id;
+	emit_changed();
 }
 
 void RunPreset::update_options() {
@@ -67,12 +76,16 @@ void RunPreset::update_options() {
 	if (!EditorExport::get_singleton()) {
 		return;
 	}
-	if (get_destination() == RunDestination::DESTINATION_REMOTE && (get_remote_platform_id() == -1 || get_select_remote_platform_id())) {
+	if (get_destination() == RunDestination::DESTINATION_REMOTE && (get_select_remote_platform_id())) {
 		for (int i = 0; i < EditorExport::get_singleton()->get_export_platform_count(); i++) {
 			Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(i);
 			Ref<EditorExportPreset> preset = EditorExport::get_singleton()->get_runnable_preset_for_platform(eep);
 
 			if (preset.is_null()) {
+				continue;
+			}
+			const int device_count = MIN(eep->get_options_count(), 9000);
+			if (device_count == 0) {
 				continue;
 			}
 			cached_options.push_back(RunPresetOptions{
@@ -81,7 +94,6 @@ void RunPreset::update_options() {
 					eep->get_run_icon(),
 					true,
 			});
-			const int device_count = MIN(eep->get_options_count(), 9000);
 			for (int j = 0; j < device_count; j++) {
 				cached_options.push_back(RunPresetOptions{
 						EditorExport::get_singleton()->encode_platform_device_id(i, j),
@@ -90,7 +102,7 @@ void RunPreset::update_options() {
 				});
 			}
 		}
-	} else if (get_destination() == RunDestination::DESTINATION_REMOTE && (get_remote_device_id() == -1 || get_select_remote_device_id())) {
+	} else if (get_destination() == RunDestination::DESTINATION_REMOTE && (get_select_remote_device_id())) {
 		Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(get_remote_platform_id());
 		const int device_count = MIN(eep->get_options_count(), 9000);
 		for (int j = 0; j < device_count; j++) {
@@ -105,6 +117,14 @@ void RunPreset::update_options() {
 	return;
 }
 
+bool RunPreset::has_options() const {
+	return get_destination() == RunDestination::DESTINATION_REMOTE && (get_select_remote_platform_id() || get_select_remote_device_id());
+}
+
+bool RunPreset::is_disabled() const {
+	return has_options() && cached_options.is_empty();
+}
+
 void RunPreset::set_option(int p_option_id) {
 	int platform_id = EditorExport::decode_platform_from_id(p_option_id);
 	int device_id = EditorExport::decode_device_from_id(p_option_id);
@@ -114,7 +134,7 @@ void RunPreset::set_option(int p_option_id) {
 
 String RunPreset::get_preset_name() const {
 	if (!preset_name.is_empty()) {
-		return preset_name;
+		return "Preset: " + preset_name;
 	}
 	if (get_destination() == DESTINATION_REMOTE) {
 		if (!get_select_remote_platform_id()) {
@@ -278,7 +298,7 @@ void RunPreset::set_remote_platform_id(int p_id) {
 }
 
 bool RunPreset::get_select_remote_platform_id() const {
-	return select_remote_platform_id;
+	return remote_platform_id == -1 || select_remote_platform_id;
 }
 void RunPreset::set_select_remote_platform_id(bool p_select) {
 	select_remote_platform_id = p_select;
@@ -312,7 +332,7 @@ void RunPreset::set_remote_device_id(int p_id) {
 }
 
 bool RunPreset::get_select_remote_device_id() const {
-	return select_remote_device_id;
+	return remote_device_id == -1 || select_remote_device_id;
 }
 void RunPreset::set_select_remote_device_id(bool p_select) {
 	select_remote_device_id = p_select;
@@ -575,7 +595,7 @@ void RunPreset::_validate_property(PropertyInfo &p_property) const {
 			p_property.hint_string = "Choose on Play:-1";
 			Ref<EditorExportPlatform> eep = EditorExport::get_singleton()->get_export_platform(remote_platform_id);
 			for (int i = 0; i < eep->get_options_count(); i++) {
-				p_property.hint_string += "," + eep->get_option_label(i);
+				p_property.hint_string += "," + eep->get_option_label(i).replace_char(',', ';').replace_char(':', ';');
 			}
 			p_property.usage |= PROPERTY_USAGE_EDITOR;
 		} else {

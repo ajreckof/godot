@@ -2331,8 +2331,12 @@ String EditorExportPlatformAndroid::get_option_label(int p_index) const {
 		return TTR("Mirror Android devices");
 	}
 	MutexLock lock(device_lock);
-	return get_name() + ": " + devices[p_index - 1].name;
+	return devices[p_index - 1].name;
 }
+
+// String EditorExportPlatformAndroid::get_option_full_label(int p_index) const {
+// 	return get_option_label(p_index);
+// }
 
 String EditorExportPlatformAndroid::get_option_tooltip(int p_index) const {
 	ERR_FAIL_INDEX_V(p_index, devices.size() + 1, "");

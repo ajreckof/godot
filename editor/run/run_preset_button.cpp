@@ -70,9 +70,6 @@ void RunPresetButton::_on_popup_id_pressed(int p_id) {
 	preset->set_option(p_id);
 	EditorRunBar::get_singleton()->play_preset(preset);
 }
-bool RunPresetButton::is_running() const {
-	return EditorRunBar::get_singleton()->get_running_preset() == preset;
-}
 
 void RunPresetButton::_update_button() {
 	if (preset.is_null()) {
@@ -82,7 +79,7 @@ void RunPresetButton::_update_button() {
 		return;
 	}
 	set_visible(preset->is_pinned());
-	set_pressed_no_signal(is_running());
+	set_disabled(preset->is_disabled());
 	set_button_icon(preset->get_icon());
 	set_tooltip_text(preset->get_preset_name());
 }

@@ -84,7 +84,6 @@ class EditorRunBar : public MarginContainer {
 	String run_current_filename;
 	PackedStringArray last_runned_scenes;
 	Ref<RunPreset> current_preset;
-	Ref<RunPreset> running_preset;
 	int MAX_CACHED_RUN_SCENES = 3;
 
 	void _reset_play_buttons();
