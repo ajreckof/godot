@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  editor_run_native.h                                                   */
+/*  run_preset_button.h                                                   */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -30,35 +30,31 @@
 
 #pragma once
 
-#include "scene/gui/box_container.h"
-#include "scene/gui/dialogs.h"
-#include "scene/gui/menu_button.h"
-#include "scene/gui/rich_text_label.h"
+#include "editor/run/editor_run_bar.h"
+#include "scene/gui/button.h"
 
-class EditorRunNative : public HBoxContainer {
-	GDCLASS(EditorRunNative, HBoxContainer);
+class RunPresetButton : public Button {
+	GDCLASS(RunPresetButton, Button);
 
-	RichTextLabel *result_dialog_log = nullptr;
-	AcceptDialog *result_dialog = nullptr;
-	ConfirmationDialog *run_native_confirm = nullptr;
-	bool run_confirmed = false;
+	Ref<RunPreset> preset;
+	void _on_button_pressed();
+	void _on_popup_id_pressed(int id);
+	void _update_button();
+	void _update_popup();
+	void _on_parent_theme_changed();
 
-	MenuButton *remote_debug = nullptr;
-	bool first = true;
+	PopupMenu *popup = nullptr;
 
-	int resume_id = -1;
-
-	void _confirm_run_native();
+	bool is_running() const;
 
 protected:
-	static void _bind_methods();
 	void _notification(int p_what);
 
 public:
-	Error start_run_native(int p_id);
-	void resume_run_native();
+	void set_preset(const Ref<RunPreset> &p_preset);
+	void _update_preset();
+	Ref<RunPreset> get_preset() const { return preset; }
+	void show_popup();
 
-	bool is_deploy_debug_remote_enabled() const;
-
-	EditorRunNative();
+	RunPresetButton();
 };

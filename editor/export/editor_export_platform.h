@@ -347,14 +347,19 @@ public:
 	virtual bool poll_export() { return false; }
 	virtual int get_options_count() const { return 0; }
 	virtual bool is_option_runnable(int p_index) const { return true; }
+	virtual bool is_option_stoppable(int p_index) const { return true; }
 	virtual String get_options_tooltip() const { return ""; }
 	virtual Ref<Texture2D> get_option_icon(int p_index) const;
+	virtual int get_option_index(String p_id) const { return p_id.is_valid_int() ? p_id.to_int() : -1; }
+	virtual String get_option_id(int p_index) const { return itos(p_index); }
 	virtual String get_option_label(int p_device) const { return ""; }
+	virtual String get_option_full_label(int p_device) const { return get_name() + ": " + get_option_label(p_device); }
 	virtual String get_option_tooltip(int p_device) const { return ""; }
 	virtual String get_device_architecture(int p_device) const { return ""; }
 
 	virtual void cleanup() {}
 	virtual Error run(const Ref<EditorExportPreset> &p_preset, int p_device, BitField<EditorExportPlatform::DebugFlags> p_debug_flags) { return OK; }
+	virtual Error stop() { return OK; }
 	virtual Ref<Texture2D> get_run_icon() const { return get_logo(); }
 
 	virtual bool can_export(const Ref<EditorExportPreset> &p_preset, String &r_error, bool &r_missing_templates, bool p_debug = false) const;

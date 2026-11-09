@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="RunPreset" inherits="Resource" api_type="editor" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_preset_name" qualifiers="const">
+			<return type="String" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="custom_icon" type="String" setter="set_custom_icon_uid" getter="get_custom_icon_uid" default="&quot;&quot;">
+		</member>
+		<member name="custom_scene_path" type="String" setter="set_custom_scene_path" getter="get_custom_scene_path" default="&quot;&quot;">
+		</member>
+		<member name="destination" type="int" setter="set_destination" getter="get_destination" default="0">
+		</member>
+		<member name="editor_icon" type="String" setter="set_editor_icon" getter="get_editor_icon" default="&quot;&quot;">
+		</member>
+		<member name="mode" type="int" setter="set_mode" getter="get_mode" default="0">
+		</member>
+		<member name="pinned" type="bool" setter="set_pinned" getter="is_pinned" default="false">
+		</member>
+		<member name="preset_name" type="String" setter="set_preset_name" getter="get_custom_preset_name" default="&quot;&quot;">
+		</member>
+		<member name="remote_device_id" type="int" setter="set_remote_device_id" getter="get_remote_device_id" default="-1">
+		</member>
+		<member name="remote_platform_id" type="int" setter="set_remote_platform_id" getter="get_remote_platform_id" default="-1">
+		</member>
+		<member name="run_xr_enabled" type="int" setter="set_run_xr_enabled" getter="get_run_xr_enabled" default="0">
+		</member>
+		<member name="shortcut" type="InputEventKey" setter="set_input_event_shortcut" getter="get_input_event_shortcut">
+		</member>
+		<member name="show_toolbar" type="int" setter="set_show_toolbar" getter="get_show_toolbar" default="1">
+		</member>
+		<member name="use_custom_icon" type="bool" setter="set_use_custom_icon" getter="get_use_custom_icon" default="false">
+		</member>
+	</members>
+</class>

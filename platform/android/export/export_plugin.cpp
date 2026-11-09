@@ -2325,6 +2325,30 @@ String EditorExportPlatformAndroid::get_options_tooltip() const {
 	return TTR("Select device from the list");
 }
 
+int EditorExportPlatformAndroid::get_option_index(String p_id) const {
+	if (p_id == "mirror_android_devices") {
+		return 0;
+	}
+	MutexLock lock(device_lock);
+	for (int i = 0; i < devices.size(); i++) {
+		if (devices[i].id == p_id) {
+			return i + 1;
+		}
+	}
+	return -1;
+}
+
+String EditorExportPlatformAndroid::get_option_id(int p_index) const {
+	if (p_index == 0) {
+		return "mirror_android_devices";
+	}
+	MutexLock lock(device_lock);
+	if (p_index - 1 < devices.size()) {
+		return devices[p_index - 1].id;
+	}
+	return String();
+}
+
 String EditorExportPlatformAndroid::get_option_label(int p_index) const {
 	ERR_FAIL_INDEX_V(p_index, devices.size() + 1, "");
 	if (p_index == 0) {

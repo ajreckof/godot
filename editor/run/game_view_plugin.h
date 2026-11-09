@@ -232,8 +232,6 @@ class GameView : public VBoxContainer {
 	MenuButton *game_window_options_menu = nullptr;
 	Label *game_size_label = nullptr;
 	HBoxContainer *game_hb = nullptr;
-	Ref<ButtonGroup> game_embed_group;
-	Button *game_embed_mode_button[EmbedMode::EMBED_TYPE_MAX];
 	Panel *panel = nullptr;
 	EmbeddedProcessBase *embedded_process = nullptr;
 	Label *state_label = nullptr;
@@ -260,7 +258,6 @@ class GameView : public VBoxContainer {
 	void _suspend_button_toggled(bool p_pressed);
 
 	void _node_type_pressed(int p_option);
-	void _game_embed_mode_pressed(int p_option);
 	void _selection_options_menu_id_pressed(int p_id);
 	void _game_window_options_menu_menu_id_pressed(int p_id);
 
@@ -286,7 +283,6 @@ class GameView : public VBoxContainer {
 	EmbedAvailability _get_embed_available();
 	void _update_ui();
 	void _update_embed_menu_options();
-	void _update_embed_buttons();
 	void _update_game_window_size_label();
 	void _update_embed_window_size();
 	void _update_arguments_for_instance(int p_idx, List<String> &r_arguments);
@@ -319,6 +315,8 @@ protected:
 
 public:
 	static EditorDock *get_dock() { return dock_singleton; }
+	void set_embed_options(bool p_embed_on_play, bool p_make_floating_on_play);
+	inline static GameView *get_singleton() { return singleton; }
 
 	void set_window_layout(Ref<ConfigFile> p_layout);
 	void get_window_layout(Ref<ConfigFile> p_layout);

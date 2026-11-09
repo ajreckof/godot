@@ -212,9 +212,9 @@ Dictionary DebugAdapterParser::_launch_process(const Dictionary &p_params) const
 		Vector<String> play_args = _extract_play_arguments(args);
 		const String scene = args.get("scene", "main");
 		if (scene == "main") {
-			EditorRunBar::get_singleton()->play_main_scene(false, play_args);
+			EditorRunBar::get_singleton()->play_main_scene(play_args);
 		} else if (scene == "current") {
-			EditorRunBar::get_singleton()->play_current_scene(false, play_args);
+			EditorRunBar::get_singleton()->play_current_scene(play_args);
 		} else {
 			EditorRunBar::get_singleton()->play_custom_scene(scene, play_args);
 		}
@@ -228,9 +228,8 @@ Dictionary DebugAdapterParser::_launch_process(const Dictionary &p_params) const
 		// If it is not passed, would mean first device of this platform.
 		const int device_idx = args.get("device", 0);
 
-		const EditorRunBar *run_bar = EditorRunBar::get_singleton();
-		const int encoded_id = EditorExport::encode_platform_device_id(platform_idx, device_idx);
-		const Error err = run_bar->start_native_device(encoded_id);
+		EditorRunBar *run_bar = EditorRunBar::get_singleton();
+		const Error err = run_bar->start_run_native(platform_idx, device_idx);
 		if (err) {
 			if (err == ERR_INVALID_PARAMETER) {
 				return prepare_error_response(p_params, DAP::ErrorType::MISSING_DEVICE);
