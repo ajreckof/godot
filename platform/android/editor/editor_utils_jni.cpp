@@ -72,7 +72,7 @@ JNIEXPORT void JNICALL Java_org_godotengine_godot_editor_utils_EditorUtils_runSc
 		}
 
 		if (scene.is_empty()) {
-			editor_run_bar->play_main_scene(false);
+			editor_run_bar->play_main_scene();
 		} else {
 			editor_run_bar->play_custom_scene(scene, scene_args);
 		}

@@ -37,31 +37,25 @@
 class AcceptDialog;
 class Button;
 class EditorExportPreset;
-class EditorRunNative;
 class HBoxContainer;
 class MenuButton;
 class PanelContainer;
-
+class ConfirmationDialog;
+class RichTextLabel;
+class PopupMenu;
+class RunPreset;
+class RunPresetManagerDialog;
 class EditorRunBar : public MarginContainer {
 	GDCLASS(EditorRunBar, MarginContainer);
 
 	static EditorRunBar *singleton;
 
-	enum RunMode {
-		STOPPED = 0,
-		RUN_MAIN,
-		RUN_CURRENT,
-		RUN_CUSTOM,
-	};
-
-	enum RunXRModeMenuItem {
-		INVALID = -1,
-		OFF = 0,
-		ON = 1,
-	};
-
 	PanelContainer *main_panel = nullptr;
 	HBoxContainer *main_hbox = nullptr;
+	HBoxContainer *preset_hbox = nullptr;
+	PanelContainer *main_play_menu_button_panel = nullptr;
+	MenuButton *main_play_menu_button = nullptr;
+	PopupMenu *main_play_popup = nullptr;
 	HBoxContainer *outer_hbox = nullptr;
 
 	Button *profiler_autostart_indicator = nullptr;
@@ -76,40 +70,52 @@ class EditorRunBar : public MarginContainer {
 	Button *stop_button = nullptr;
 	Button *play_scene_button = nullptr;
 	Button *play_custom_scene_button = nullptr;
+	MenuButton *presets_menu_button = nullptr;
+	RunPresetManagerDialog *run_preset_manager_dialog = nullptr;
 
 	EditorRun editor_run;
-	EditorRunNative *run_native = nullptr;
-	bool is_native = false;
+	ConfirmationDialog *run_native_confirm = nullptr;
+	RichTextLabel *native_result_dialog_log = nullptr;
+	AcceptDialog *native_result_dialog = nullptr;
+	bool run_native_confirmed = false;
 
-	enum MovieMakerMenuItem {
-		MOVIE_MAKER_TOGGLE,
-		MOVIE_MAKER_OPEN_SETTINGS,
-	};
-	PanelContainer *write_movie_panel = nullptr;
-	MenuButton *write_movie_button = nullptr;
 	bool movie_maker_enabled = false;
 
-	RunMode current_mode = RunMode::STOPPED;
 	String run_custom_filename;
 	String run_current_filename;
+	int run_remote_platform_id;
+	PackedStringArray last_runned_scenes;
+	Ref<RunPreset> current_preset;
+	int MAX_CACHED_RUN_SCENES = 3;
 
 	void _reset_play_buttons();
 	void _update_play_buttons();
+	void _on_presets_menu_item_pressed(int p_id);
+	void _on_presets_submenu_item_pressed(int p_option_id, int p_preset_id);
 
 	void _movie_maker_item_pressed(int p_id);
 	void _write_movie_toggled(bool p_enabled);
-	void _quick_run_selected(const String &p_file_path, int p_menu_item = RunXRModeMenuItem::INVALID);
-
-	void _play_current_pressed(int p_menu_item = RunXRModeMenuItem::INVALID);
-	void _play_custom_pressed(int p_menu_item = RunXRModeMenuItem::INVALID);
+	void _quick_run_selected(const String &p_file_path);
 
 	void _run_scene(const String &p_scene_path = "", const Vector<String> &p_run_args = Vector<String>());
 	void _run_native(const Ref<EditorExportPreset> &p_preset);
+	void _confirm_run_native();
 
 	void _profiler_autostart_indicator_pressed();
+	void _generate_popup_menu();
+	void _generate_presets_buttons();
+	void _update_presets_menu_button();
+	void add_preset_to_presets_menu_button(Ref<RunPreset> p_preset);
+	void _on_popup_menu_id_pressed(int p_id);
+	void _on_popup_menu_hide();
+	void _save_current_preset();
+
+	void _selected_scene(const String p_scene_path);
+	void _selected_running_scene(const String p_scene_path);
+	void _update_game_view_destination();
 
 private:
-	static Vector<String> _get_xr_mode_play_args(RunXRModeMenuItem p_menu_item);
+	static Vector<String> _get_xr_mode_play_args(bool p_xr_enabled);
 
 protected:
 	void _notification(int p_what);
@@ -121,15 +127,18 @@ public:
 	void recovery_mode_show_dialog();
 	void recovery_mode_reload_project();
 
-	void play_main_scene(bool p_from_native = false, const Vector<String> &p_play_args = Vector<String>());
-	void play_current_scene(bool p_reload = false, const Vector<String> &p_play_args = Vector<String>());
-	void play_custom_scene(const String &p_custom, const Vector<String> &p_play_args = Vector<String>());
+	void play_current_preset();
+	void play_main_scene(const Vector<String> &p_play_args = Vector<String>());
+	void play_current_scene(const Vector<String> &p_play_args = Vector<String>());
+	void play_custom_scene(const String &p_scene_path, const Vector<String> &p_play_args = Vector<String>());
+
+	void play_preset(const Ref<RunPreset> p_preset);
 
 	void stop_playing();
+	void notify_all_debug_sessions_exited();
 	bool is_playing() const;
 	String get_playing_scene() const;
-
-	Error start_native_device(int p_device_id) const;
+	Ref<RunPreset> get_running_preset() const;
 	bool is_running_natively() const;
 
 	ProcessID has_child_process(ProcessID p_pid) const;
@@ -146,4 +155,6 @@ public:
 	HBoxContainer *get_buttons_container();
 
 	EditorRunBar();
+	Error start_run_native(int p_platform, int p_device);
+	void resume_running_preset();
 };

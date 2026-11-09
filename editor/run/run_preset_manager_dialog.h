@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  editor_run_native.h                                                   */
+/*  run_preset_manager_dialog.h                                           */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -30,35 +30,60 @@
 
 #pragma once
 
-#include "scene/gui/box_container.h"
 #include "scene/gui/dialogs.h"
-#include "scene/gui/menu_button.h"
-#include "scene/gui/rich_text_label.h"
+#include "scene/gui/item_list.h"
 
-class EditorRunNative : public HBoxContainer {
-	GDCLASS(EditorRunNative, HBoxContainer);
+class RunPreset;
+class EditorInspector;
+class ItemList;
 
-	RichTextLabel *result_dialog_log = nullptr;
-	AcceptDialog *result_dialog = nullptr;
-	ConfirmationDialog *run_native_confirm = nullptr;
-	bool run_confirmed = false;
+class RunPresetManagerDialog : public AcceptDialog {
+	GDCLASS(RunPresetManagerDialog, AcceptDialog);
 
-	MenuButton *remote_debug = nullptr;
-	bool first = true;
+private:
+	enum {
+		PRESET_CONTEXT_MENU_DUPLICATE,
+		PRESET_CONTEXT_MENU_DELETE
+	};
+	Vector<Ref<RunPreset>> presets;
+	ItemList *presets_list;
+	TypedArray<RunPreset> default_presets;
+	EditorInspector *preset_inspector;
+	VBoxContainer *info_message_vbox;
+	Ref<RunPreset> new_preset;
+	Ref<RunPreset> main_scene_preset;
+	Ref<RunPreset> current_scene_preset;
+	Ref<RunPreset> remote_run_preset;
+	Ref<RunPreset> custom_scene_preset;
+	PopupMenu *preset_context_menu;
 
-	int resume_id = -1;
+	void _on_add_pressed();
+	void _on_restore_pressed();
+	void _on_preset_selected(int p_index);
+	void _on_preset_clicked(int p_index, const Vector2 &p_local_mouse_pos, int p_button);
+	void _on_preset_property_edited();
+	void _update_preset_list();
+	void _on_preset_context_menu_item_pressed(int p_id, int preset_index);
 
-	void _confirm_run_native();
+	int current_drop_index;
+	Variant get_drag_data_fw(const Point2 &p_point, Control *p_from);
+	bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const;
+	void drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
+
+	void save_presets();
 
 protected:
 	static void _bind_methods();
 	void _notification(int p_what);
 
+	void _on_parent_theme_changed();
+
 public:
-	Error start_run_native(int p_id);
-	void resume_run_native();
+	Vector<Ref<RunPreset>> get_presets() const { return presets; }
+	Ref<RunPreset> get_main_scene_preset() const { return main_scene_preset; }
+	Ref<RunPreset> get_current_scene_preset() const { return current_scene_preset; }
+	Ref<RunPreset> get_custom_scene_preset() const { return custom_scene_preset; }
+	Ref<RunPreset> get_remote_run_preset() const { return remote_run_preset; }
 
-	bool is_deploy_debug_remote_enabled() const;
-
-	EditorRunNative();
+	RunPresetManagerDialog();
 };

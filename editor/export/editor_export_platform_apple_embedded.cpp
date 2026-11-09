@@ -2602,6 +2602,20 @@ Ref<Texture2D> EditorExportPlatformAppleEmbedded::get_option_icon(int p_index) c
 	return icon;
 }
 
+int EditorExportPlatformAppleEmbedded::get_option_index(String p_id) const {
+	for (int i = 0; i < devices.size(); i++) {
+		if (devices[i].id == p_id) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+String EditorExportPlatformAppleEmbedded::get_option_id(int p_index) const {
+	ERR_FAIL_INDEX_V(p_index, devices.size(), "");
+	return devices[p_index].id;
+}
+
 String EditorExportPlatformAppleEmbedded::get_option_label(int p_index) const {
 	ERR_FAIL_INDEX_V(p_index, devices.size(), "");
 	MutexLock lock(device_lock);

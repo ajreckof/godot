@@ -2769,7 +2769,7 @@ void EditorNode::_dialog_action(String p_file) {
 			ProjectSettings::get_singleton()->save();
 			// TODO: Would be nice to show the project manager opened with the highlighted field.
 
-			project_run_bar->play_main_scene((bool)pick_main_scene->get_meta("from_native", false));
+			project_run_bar->resume_running_preset();
 		} break;
 		case SCENE_CLOSE:
 		case SCENE_TAB_CLOSE:
@@ -2836,7 +2836,7 @@ void EditorNode::_dialog_action(String p_file) {
 			if (file->get_file_mode() == EditorFileDialog::FILE_MODE_SAVE_FILE) {
 				save_default_environment();
 				_save_scene_with_preview(p_file);
-				project_run_bar->play_main_scene((bool)pick_main_scene->get_meta("from_native", false));
+				project_run_bar->resume_running_preset();
 			}
 		} break;
 
@@ -5676,7 +5676,7 @@ void EditorNode::_project_run_stopped() {
 }
 
 void EditorNode::notify_all_debug_sessions_exited() {
-	project_run_bar->stop_playing();
+	EditorRunBar::get_singleton()->notify_all_debug_sessions_exited();
 }
 
 void EditorNode::add_io_error(const String &p_error) {
@@ -9298,11 +9298,11 @@ EditorNode::EditorNode() {
 	project_title->set_visible(can_expand && menu_type == MENU_TYPE_GLOBAL);
 	left_spacer->add_child(project_title);
 
-	// Spacer to center 2D / 3D / Script buttons.
-	right_spacer = memnew(Control);
-	right_spacer->set_mouse_filter(Control::MOUSE_FILTER_IGNORE);
-	right_spacer->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	title_bar->add_child(right_spacer);
+	// // Spacer to center 2D / 3D / Script buttons.
+	// right_spacer = memnew(Control);
+	// right_spacer->set_mouse_filter(Control::MOUSE_FILTER_IGNORE);
+	// right_spacer->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	// title_bar->add_child(right_spacer);
 
 	project_run_bar = memnew(EditorRunBar);
 	project_run_bar->set_mouse_filter(Control::MOUSE_FILTER_STOP);
